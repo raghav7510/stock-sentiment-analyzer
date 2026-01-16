@@ -4,3 +4,7 @@ pandas
 matplotlib
 torch
 transformers
+yfinance
+wordcloud
+numpy
+scikit-learn
