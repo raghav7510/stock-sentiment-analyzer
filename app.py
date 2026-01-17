@@ -305,7 +305,8 @@ st.markdown("<div style='height: 3px; background: linear-gradient(90deg, #667eea
 # Live status indicator with refresh button
 col_status_1, col_status_2, col_status_3 = st.columns([2.5, 1, 0.5])
 with col_status_1:
-    st.markdown(f'<div style="font-size: 0.9em; color: #51CF66; font-weight: 600;">🔴 LIVE MODE • Auto-updates every 30 sec • Refresh #{st.session_state.refresh_count} • 500+ Articles</div>', unsafe_allow_html=True)
+    model_status = "✅ MODEL READY" if (tokenizer and model) else "⏳ MODEL LOADING"
+    st.markdown(f'<div style="font-size: 0.9em; color: #51CF66; font-weight: 600;">🔴 LIVE MODE • {model_status} • 500+ Articles</div>', unsafe_allow_html=True)
 with col_status_2:
     if st.button("🔄 Refresh Now", help="Fetch fresh data immediately"):
         st.cache_data.clear()
@@ -319,13 +320,19 @@ st.markdown("<hr style='margin: 12px 0;'>", unsafe_allow_html=True)
 # ============ MODEL LOADING ============
 @st.cache_resource
 def load_model():
+    """Load FinBERT model for sentiment analysis"""
     try:
         tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
         return tokenizer, model
     except Exception as e:
-        st.error(f"❌ Error loading model: {str(e)}")
-        return None, None
+        try:
+            # Try loading from local directory
+            tokenizer = AutoTokenizer.from_pretrained("./finbert_sentiment_model")
+            model = AutoModelForSequenceClassification.from_pretrained("./finbert_sentiment_model")
+            return tokenizer, model
+        except:
+            return None, None
 
 tokenizer, model = load_model()
 
@@ -532,13 +539,17 @@ def get_demo_news(company):
 def analyze(text):
     """Analyze sentiment using FinBERT"""
     if not tokenizer or not model:
-        st.warning("⚠️ Model loading... Please wait or try again in a moment")
         return None, None, None
     
     try:
+        # Encode text
         inputs = tokenizer.encode(text, return_tensors='pt', max_length=512, truncation=True)
-        outputs = model(inputs)
         
+        # Forward pass through model
+        with torch.no_grad():
+            outputs = model(inputs)
+        
+        # Get probabilities
         probabilities = F.softmax(outputs.logits, dim=1)
         confidence, prediction = torch.max(probabilities, 1)
         
@@ -555,7 +566,6 @@ def analyze(text):
         
         return sentiment, score, float(confidence.item())
     except Exception as e:
-        st.error(f"❌ Analysis error: {str(e)}")
         return None, None, None
 
 def analyze_news_sentiment(company):
@@ -567,21 +577,27 @@ def analyze_news_sentiment(company):
         return []
     
     if not tokenizer or not model:
-        st.error("❌ AI Model is loading... This may take 30-60 seconds on first run. Please wait or refresh the page.")
+        st.error("❌ AI Model not loaded! Please refresh the page and wait for the model to load (30-60 seconds).")
+        st.info("Check the status at the top of the page - it should show '✅ MODEL READY'")
         return []
     
     results = []
     progress_bar = st.progress(0)
     status_text = st.empty()
     error_count = 0
+    success_count = 0
+    
+    debug_info = st.empty()
+    debug_info.write(f"📰 Processing {len(news_articles)} articles with FinBERT AI...")
     
     for i, article in enumerate(news_articles):
         headline = article.get("title", "")
         
         if not headline or len(headline) < 3:
+            error_count += 1
             continue
         
-        # ALWAYS use FinBERT for sentiment analysis (don't use pre-assigned from demo)
+        # ALWAYS use FinBERT for sentiment analysis
         sentiment, score, confidence = analyze(headline)
         
         if sentiment and sentiment in ["Positive", "Negative", "Neutral"]:
@@ -599,20 +615,24 @@ def analyze_news_sentiment(company):
                 "source": article.get("source", {}).get("name", "Unknown"),
                 "published": article.get("publishedAt", "")
             })
+            success_count += 1
         else:
             error_count += 1
         
         progress = (i + 1) / len(news_articles)
         progress_bar.progress(progress)
-        status_text.text(f"🔍 Analyzing: {i+1}/{len(news_articles)} articles... ({len(results)} ✓ analyzed, {error_count} errors)")
+        status_text.text(f"🔍 Processing: {i+1}/{len(news_articles)} | ✓ {success_count} | ⚠️ {error_count}")
     
     progress_bar.empty()
     status_text.empty()
+    debug_info.empty()
     
-    if not results and error_count > 0:
-        st.error(f"❌ Model failed to analyze articles. Model may still be loading. Analyzed {len(results)}, Errors: {error_count}. Please refresh or try again in a moment.")
-    elif not results:
-        st.warning("⚠️ No articles available for analysis.")
+    if results:
+        st.success(f"✅ Successfully analyzed {success_count}/{len(news_articles)} articles!")
+    else:
+        st.error(f"❌ Analysis failed!\n\n**Results:**\n- Processed: {len(news_articles)} articles\n- Successful: {success_count}\n- Failed: {error_count}\n\n**Debug Info:**\n- Tokenizer loaded: {tokenizer is not None}\n- Model loaded: {model is not None}\n\nPlease refresh the page and try again. The model may still be initializing.")
+    
+    return results
     
     return results
 
