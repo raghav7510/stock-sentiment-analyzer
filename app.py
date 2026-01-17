@@ -299,14 +299,16 @@ st.markdown('<div class="subtitle">🚀 Enterprise-Grade Real-Time Analysis | 50
 st.markdown("<div style='height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%); margin: 30px 0; border-radius: 3px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'></div>", unsafe_allow_html=True)
 
 # Live status indicator with refresh button
-col_status_1, col_status_2 = st.columns([3, 1])
+col_status_1, col_status_2, col_status_3 = st.columns([2.5, 1, 0.5])
 with col_status_1:
-    st.markdown(f'<div style="font-size: 0.9em; color: #27ae60; font-weight: 600;">🔴 LIVE MODE • Auto-updates every 60 sec • Refresh #{st.session_state.refresh_count} • 500+ Articles</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size: 0.9em; color: #51CF66; font-weight: 600;">🔴 LIVE MODE • Auto-updates every 30 sec • Refresh #{st.session_state.refresh_count} • 500+ Articles</div>', unsafe_allow_html=True)
 with col_status_2:
     if st.button("🔄 Refresh Now", help="Fetch fresh data immediately"):
         st.cache_data.clear()
         st.session_state.refresh_count += 1
         st.rerun()
+with col_status_3:
+    st.markdown(f'<div style="font-size: 0.8em; color: #667eea; font-weight: 600;">⚡ LIVE</div>', unsafe_allow_html=True)
 
 st.markdown("<hr style='margin: 12px 0;'>", unsafe_allow_html=True)
 
@@ -473,40 +475,135 @@ def get_forex_rate():
     except:
         return 82.5  # Default rate
 
-@st.cache_data(ttl=60)  # 60 seconds - live stock price updates
+@st.cache_data(ttl=30)  # 30 seconds - LIVE stock price updates
 def get_stock_price(ticker):
-    """Fetch live stock price"""
+    """Fetch LIVE stock price from yfinance with proper Indian stock handling"""
     try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        hist = stock.history(period="1y")
+        original_ticker = ticker
         
-        # Get country info
+        # CRITICAL FIX: If ticker doesn't have .NS or .BO, auto-add .NS for Indian stocks
+        # This is because yfinance defaults to US ADR versions (wrong prices!)
+        if ticker and not ticker.endswith('.NS') and not ticker.endswith('.BO'):
+            ticker_with_ns = ticker + '.NS'
+            try:
+                test_stock = yf.Ticker(ticker_with_ns)
+                test_hist = test_stock.history(period="1d")
+                if not test_hist.empty:
+                    # Has data with .NS, so it's an Indian stock
+                    ticker = ticker_with_ns
+            except:
+                # Keep original ticker if .NS fails
+                pass
+        
+        # Fetch stock data
+        stock = yf.Ticker(ticker)
+        
+        # Get current data
+        hist_1d = stock.history(period="5d", interval="1d")
+        
+        # Get info
+        try:
+            info = stock.info
+        except:
+            info = {}
+        
+        # Get 1 year history for 52W stats
+        try:
+            hist_1y = stock.history(period="1y")
+        except:
+            hist_1y = hist_1d
+        
+        # Get LIVE current price - multiple strategies
+        current_price = None
+        
+        # Strategy 1: Most recent historical close (most reliable)
+        if not hist_1d.empty and len(hist_1d) > 0:
+            current_price = float(hist_1d['Close'].iloc[-1])
+        
+        # Strategy 2: regularMarketPrice from info
+        if current_price is None or current_price <= 0:
+            current_price = info.get('regularMarketPrice')
+        
+        # Strategy 3: currentPrice from info
+        if current_price is None or current_price <= 0:
+            current_price = info.get('currentPrice')
+        
+        # Strategy 4: previousClose from info
+        if current_price is None or current_price <= 0:
+            current_price = info.get('previousClose')
+        
+        # Strategy 5: Try bid/ask average
+        if current_price is None or current_price <= 0:
+            bid = info.get('bid')
+            ask = info.get('ask')
+            if bid and ask and bid > 0 and ask > 0:
+                current_price = (bid + ask) / 2
+        
+        # Validate price
+        if current_price and current_price > 0:
+            current_price = float(current_price)
+        else:
+            current_price = None
+        
+        # 52W High/Low
+        high_52w = None
+        low_52w = None
+        if not hist_1y.empty and len(hist_1y) > 0:
+            high_52w = float(hist_1y['High'].max())
+            low_52w = float(hist_1y['Low'].min())
+        
+        # P/E Ratio
+        pe_ratio = info.get('trailingPE') or info.get('forwardPE')
+        if pe_ratio:
+            pe_ratio = float(pe_ratio)
+        
+        # Country & Currency
         country = info.get('country', 'US')
         currency = info.get('currency', 'USD')
         
-        # Get prices with proper defaults
-        current_price = info.get('currentPrice', 0) or info.get('regularMarketPrice', 0) or 0
-        high_52w = info.get('fiftyTwoWeekHigh', 0) or 0
-        low_52w = info.get('fiftyTwoWeekLow', 0) or 0
-        pe_ratio = info.get('trailingPE', 0) or info.get('forwardPE', 0) or 0
+        # Better country detection
+        if 'NSE' in str(info.get('exchange', '')) or 'BSE' in str(info.get('exchange', '')) or ticker.endswith('.NS') or ticker.endswith('.BO'):
+            country = 'India'
+            currency = 'INR'
+        
+        # Get volume
+        volume = 0
+        if not hist_1d.empty and len(hist_1d) > 0 and 'Volume' in hist_1d.columns:
+            vol = hist_1d['Volume'].iloc[-1]
+            if vol and vol > 0:
+                volume = int(vol)
+        
+        # Calculate price change
+        change = 0
+        change_pct = 0
+        if len(hist_1d) >= 2 and current_price and current_price > 0:
+            prev_close = float(hist_1d['Close'].iloc[-2])
+            if prev_close > 0:
+                change = current_price - prev_close
+                change_pct = (change / prev_close * 100)
         
         return {
-            'price': float(current_price) if current_price else 0,
-            '52w_high': float(high_52w) if high_52w else 0,
-            '52w_low': float(low_52w) if low_52w else 0,
-            'pe_ratio': float(pe_ratio) if pe_ratio else 0,
+            'price': current_price,
+            '52w_high': high_52w,
+            '52w_low': low_52w,
+            'pe_ratio': pe_ratio,
             'market_cap': info.get('marketCap', 0),
-            'sector': info.get('sector', ''),
-            'history': hist,
+            'sector': info.get('sector', 'N/A'),
+            'history': hist_1y,
+            'history_1d': hist_1d,
             'country': country,
-            'currency': currency
+            'currency': currency,
+            'volume': volume,
+            'change': change,
+            'change_pct': change_pct,
+            'ticker_used': ticker
         }
-    except:
+    except Exception as e:
+        st.warning(f"⚠️ Error fetching {ticker}: {str(e)[:60]}")
         return None
 
 def plot_stock_chart(ticker, period="1mo"):
-    """Plot stock price chart"""
+    """Plot professional LIVE stock price chart like Zerodha"""
     try:
         stock = yf.Ticker(ticker)
         hist = stock.history(period=period)
@@ -515,25 +612,81 @@ def plot_stock_chart(ticker, period="1mo"):
             return None
         
         # Get country info
-        info = stock.info
-        country = info.get('country', 'US')
-        currency = info.get('currency', 'USD')
-        is_indian = country.upper() == 'INDIA'
+        try:
+            info = stock.info
+            country = info.get('country', 'US')
+            currency = info.get('currency', 'USD')
+        except:
+            country = 'US'
+            currency = 'USD'
         
-        # Get currency symbol
+        is_indian = country.upper() == 'INDIA'
         currency_symbol = "₹" if is_indian else "$"
         currency_label = "INR" if is_indian else currency
         
-        fig, ax = plt.subplots(figsize=(12, 5))
-        ax.plot(hist.index, hist['Close'], linewidth=2.5, color='#667eea')
-        ax.fill_between(hist.index, hist['Close'], alpha=0.3, color='#667eea')
-        ax.set_title(f"{ticker} Price - Last {period} ({currency_label})", fontsize=13, fontweight='bold')
-        ax.set_ylabel(f"Price ({currency_label})")
-        ax.grid(True, alpha=0.3)
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{currency_symbol}{x:,.0f}'))
+        # Create professional figure with price and volume
+        fig = plt.figure(figsize=(14, 7))
+        gs = fig.add_gridspec(3, 1, height_ratios=[3, 1, 0.05], hspace=0.3)
+        
+        # Price chart (top)
+        ax1 = fig.add_subplot(gs[0])
+        
+        # Calculate colors based on open/close
+        colors = ['#51CF66' if close >= open_ else '#FF6B6B' for open_, close in zip(hist['Open'], hist['Close'])]
+        
+        # Plot candlesticks (simplified with bar)
+        for i, (date, row) in enumerate(hist.iterrows()):
+            high = row['High']
+            low = row['Low']
+            open_ = row['Open']
+            close = row['Close']
+            color = '#51CF66' if close >= open_ else '#FF6B6B'
+            
+            # Thin line for high-low range
+            ax1.plot([i, i], [low, high], color=color, linewidth=1, alpha=0.6)
+            # Thick bar for open-close
+            ax1.bar(i, abs(close - open_), bottom=min(open_, close), width=0.6, color=color, alpha=0.8, edgecolor=color, linewidth=1)
+        
+        # Smooth line over closes
+        ax1.plot(range(len(hist)), hist['Close'], color='#667eea', linewidth=2.5, alpha=0.7, label='Close Price', zorder=5)
+        
+        ax1.set_title(f"📈 {ticker} - {currency_label} | LIVE PRICE CHART", fontsize=14, fontweight='bold', pad=15, color='#1a1a1a')
+        ax1.set_ylabel(f"Price ({currency_label})", fontsize=11, fontweight='bold')
+        ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{currency_symbol}{x:,.0f}'))
+        ax1.grid(True, alpha=0.2, linestyle='--', linewidth=0.5)
+        ax1.set_facecolor('#fafbfc')
+        
+        # Volume chart (bottom)
+        ax2 = fig.add_subplot(gs[1])
+        colors_vol = ['#51CF66' if close >= open_ else '#FF6B6B' for open_, close in zip(hist['Open'], hist['Close'])]
+        ax2.bar(range(len(hist)), hist['Volume'], color=colors_vol, alpha=0.5, width=0.8)
+        ax2.set_ylabel('Volume', fontsize=10, fontweight='bold')
+        ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x/1e6)}M' if x >= 1e6 else f'{int(x/1e3)}K'))
+        ax2.grid(True, alpha=0.2, linestyle='--', linewidth=0.5, axis='y')
+        ax2.set_facecolor('#fafbfc')
+        
+        # Sync x-axis
+        ax2.set_xlim(ax1.get_xlim())
+        ax2.set_xticks(range(0, len(hist), max(1, len(hist)//6)))
+        ax2.set_xticklabels([hist.index[i].strftime('%b %d') for i in range(0, len(hist), max(1, len(hist)//6))], rotation=45)
+        ax1.set_xticks([])
+        
+        # Add legend
+        current_price = hist['Close'].iloc[-1]
+        prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+        change = current_price - prev_close
+        change_pct = (change / prev_close * 100) if prev_close != 0 else 0
+        
+        change_color = '#51CF66' if change >= 0 else '#FF6B6B'
+        change_symbol = '+' if change >= 0 else ''
+        
+        ax1.text(0.02, 0.98, f"Current: {currency_symbol}{current_price:,.2f} | Change: {change_symbol}{change:,.2f} ({change_symbol}{change_pct:.2f}%)",
+                transform=ax1.transAxes, fontsize=11, fontweight='bold', color=change_color,
+                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        
         fig.tight_layout()
         return fig
-    except:
+    except Exception as e:
         return None
 
 def analyze_sentiment_price_impact(ticker, results):
@@ -936,41 +1089,39 @@ if analyze_btn and company.strip():
                 currency_symbol = "₹" if is_indian else "$"
                 currency_label = "INR" if is_indian else stock_data['currency']
                 
-                # Display prices with validation
-                display_price = stock_data['price'] if stock_data['price'] > 0 else 0
-                display_high = stock_data['52w_high'] if stock_data['52w_high'] > 0 else 0
-                display_low = stock_data['52w_low'] if stock_data['52w_low'] > 0 else 0
-                pe_ratio = stock_data['pe_ratio'] if stock_data['pe_ratio'] > 0 else 0
-                
                 # Only show metrics if data is valid
-                if display_price > 0:
+                if stock_data['price'] is not None:
                     col1, col2, col3, col4 = st.columns(4)
                     
+                    # Current price with change indicator
                     with col1:
-                        st.metric("💵 Current", f"{currency_symbol}{display_price:,.2f}")
+                        change_display = f"{currency_symbol}{stock_data['change']:,.2f} ({stock_data['change_pct']:+.2f}%)"
+                        change_color = "green" if stock_data['change'] >= 0 else "red"
+                        st.metric("💵 Current Price", f"{currency_symbol}{stock_data['price']:,.2f}", delta=change_display, delta_color=change_color)
                     
                     with col2:
-                        if display_high > 0:
-                            st.metric("📈 52W High", f"{currency_symbol}{display_high:,.2f}")
+                        if stock_data['52w_high'] is not None:
+                            st.metric("📈 52W High", f"{currency_symbol}{stock_data['52w_high']:,.2f}")
                         else:
                             st.metric("📈 52W High", "N/A")
                     
                     with col3:
-                        if display_low > 0:
-                            st.metric("📉 52W Low", f"{currency_symbol}{display_low:,.2f}")
+                        if stock_data['52w_low'] is not None:
+                            st.metric("📉 52W Low", f"{currency_symbol}{stock_data['52w_low']:,.2f}")
                         else:
                             st.metric("📉 52W Low", "N/A")
                     
                     with col4:
-                        if pe_ratio > 0:
-                            st.metric("P/E Ratio", f"{pe_ratio:.1f}")
+                        if stock_data['pe_ratio'] is not None:
+                            st.metric("P/E Ratio", f"{stock_data['pe_ratio']:.1f}")
                         else:
                             st.metric("P/E Ratio", "N/A")
                     
-                    # Show currency info
+                    # Show currency and volume info
+                    volume_str = f"{stock_data['volume']/1e6:.2f}M" if stock_data['volume'] >= 1e6 else f"{stock_data['volume']/1e3:.0f}K"
                     st.markdown(f"""
-                    <div style="background: #e8f4f8; padding: 12px; border-radius: 8px; font-size: 0.9em; margin: 15px 0; color: #1a1a1a; border-left: 4px solid #667eea;">
-                    💱 <b>Currency:</b> {currency_label}
+                    <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 15px; border-radius: 12px; font-size: 0.9em; margin: 15px 0; color: #e0e0e0; border-left: 4px solid #667eea; border: 1px solid rgba(102, 126, 234, 0.2);">
+                    💱 <b>Currency:</b> {currency_label} | 📊 <b>Volume:</b> {volume_str} | 🌍 <b>Country:</b> {stock_data['country']}
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -1098,7 +1249,10 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown(f"""
 <div class="disclaimer">
 ⚠️ For educational purposes. Not financial advice.<br>
-📡 <b>Live Mode Active</b> - Data updates automatically every 60 seconds<br>
-📰 Maximum articles fetched: 500+ from 12 search queries
+✅ <b>LIVE Mode Active</b> - Stock prices update every 30 seconds from real market data<br>
+📊 <b>Real-Time Prices</b>: Auto-detects Indian stocks (INFY, TCS, RELIANCE, etc.) and fetches correct INR prices<br>
+📰 Maximum articles fetched: 500+ from 12 search queries<br>
+📈 Charts: Professional candlestick + volume | Auto-refresh every 30 seconds<br>
+🔄 Data Source: yfinance (Yahoo Finance) - Real market data
 </div>
 """, unsafe_allow_html=True)
