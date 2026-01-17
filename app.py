@@ -34,6 +34,18 @@ if 'last_analysis_time' not in st.session_state:
     st.session_state.last_analysis_time = None
 if 'auto_refresh_enabled' not in st.session_state:
     st.session_state.auto_refresh_enabled = True
+if 'show_more_positive' not in st.session_state:
+    st.session_state.show_more_positive = False
+if 'show_more_neutral' not in st.session_state:
+    st.session_state.show_more_neutral = False
+if 'show_more_negative' not in st.session_state:
+    st.session_state.show_more_negative = False
+if 'positive_count' not in st.session_state:
+    st.session_state.positive_count = 5
+if 'neutral_count' not in st.session_state:
+    st.session_state.neutral_count = 5
+if 'negative_count' not in st.session_state:
+    st.session_state.negative_count = 5
 
 # ============ CUSTOM CSS ============
 st.markdown("""
@@ -43,7 +55,7 @@ st.markdown("""
     }
     
     body {
-        background: #ffffff;
+        background: #f8f9fa;
     }
     
     .main-title {
@@ -51,23 +63,24 @@ st.markdown("""
         font-size: 2.8em;
         font-weight: 700;
         margin: 30px 0 10px 0;
-        color: #2c3e50;
+        color: #1a1a1a;
         letter-spacing: -0.5px;
     }
     
     .subtitle {
         text-align: center;
         font-size: 1em;
-        color: #7f8c8d;
+        color: #555555;
         margin-bottom: 30px;
     }
     
     .input-section {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 25px;
-        border-radius: 12px;
-        margin: 25px 0;
+        padding: 30px;
+        border-radius: 15px;
+        margin: 20px 0;
         color: white;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
     }
     
     .input-label {
@@ -80,20 +93,20 @@ st.markdown("""
     .section-header {
         font-size: 1.6em;
         font-weight: 700;
-        color: #2c3e50;
-        border-bottom: 2px solid #667eea;
+        color: #1a1a1a;
+        border-bottom: 3px solid #667eea;
         padding-bottom: 12px;
-        margin: 28px 0 20px 0;
+        margin: 30px 0 20px 0;
     }
     
     .info-box {
-        background: #ecf0f1;
+        background: #e8f4f8;
         padding: 15px;
         border-left: 4px solid #667eea;
         border-radius: 6px;
         margin: 15px 0;
         font-size: 0.95em;
-        color: #2c3e50;
+        color: #1a1a1a;
     }
     
     .metric-box {
@@ -105,28 +118,42 @@ st.markdown("""
     }
     
     .news-item {
-        background: #fafbfc;
-        padding: 14px;
+        background: #ffffff;
+        padding: 16px;
         border-left: 5px solid #667eea;
-        margin: 10px 0;
-        border-radius: 6px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        transition: all 0.2s ease;
-        border: 1px solid #e1e8ed;
+        margin: 12px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border: 1px solid #e0e0e0;
     }
     
     .news-item b {
         color: #1a1a1a;
         font-size: 0.98em;
-        line-height: 1.45;
+        line-height: 1.5;
         display: block;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    
+    .news-item p {
+        color: #333333;
+        font-size: 0.9em;
+        margin: 0;
+        line-height: 1.4;
+    }
+    
+    .news-meta {
+        color: #666666;
+        font-size: 0.85em;
+        margin-top: 8px;
     }
     
     .news-item:hover {
-        box-shadow: 0 4px 12px rgba(102,126,234,0.2);
-        transform: translateX(2px);
-        background: #f0f5ff;
+        box-shadow: 0 4px 12px rgba(102,126,234,0.25);
+        transform: translateX(4px);
+        background: #fafbff;
     }
     
     .sentiment-bullish {
@@ -161,7 +188,7 @@ st.markdown("""
     
     .metric-label {
         font-size: 0.85em;
-        color: #7f8c8d;
+        color: #666666;
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -170,24 +197,40 @@ st.markdown("""
     .metric-value {
         font-size: 1.8em;
         font-weight: 700;
-        color: #2c3e50;
+        color: #1a1a1a;
         margin: 8px 0;
+    }
+    
+    .show-more-btn {
+        background: #667eea;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        margin: 15px 0;
+        font-size: 0.9em;
+    }
+    
+    .show-more-btn:hover {
+        background: #764ba2;
     }
     
     hr {
         border: 0;
         height: 1px;
-        background: #ecf0f1;
-        margin: 30px 0;
+        background: #e0e0e0;
+        margin: 25px 0;
     }
     
     .disclaimer {
         text-align: center;
         font-size: 0.85em;
-        color: #95a5a6;
+        color: #666666;
         margin-top: 30px;
         padding-top: 20px;
-        border-top: 1px solid #ecf0f1;
+        border-top: 1px solid #e0e0e0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -383,11 +426,17 @@ def get_stock_price(ticker):
         country = info.get('country', 'US')
         currency = info.get('currency', 'USD')
         
+        # Get prices with proper defaults
+        current_price = info.get('currentPrice', 0) or info.get('regularMarketPrice', 0) or 0
+        high_52w = info.get('fiftyTwoWeekHigh', 0) or 0
+        low_52w = info.get('fiftyTwoWeekLow', 0) or 0
+        pe_ratio = info.get('trailingPE', 0) or info.get('forwardPE', 0) or 0
+        
         return {
-            'price': info.get('currentPrice', 0),
-            '52w_high': info.get('fiftyTwoWeekHigh', 0),
-            '52w_low': info.get('fiftyTwoWeekLow', 0),
-            'pe_ratio': info.get('trailingPE', 0),
+            'price': float(current_price) if current_price else 0,
+            '52w_high': float(high_52w) if high_52w else 0,
+            '52w_low': float(low_52w) if low_52w else 0,
+            'pe_ratio': float(pe_ratio) if pe_ratio else 0,
             'market_cap': info.get('marketCap', 0),
             'sector': info.get('sector', ''),
             'history': hist,
@@ -730,45 +779,69 @@ if analyze_btn and company.strip():
         with tab1:
             positive_results = [r for r in results if r["sentiment"] == "Positive"]
             if positive_results:
-                st.markdown(f"**� Total: {len(positive_results)} positive articles** | Showing up to 100")
-                for r in positive_results[:100]:
-                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
+                st.markdown(f"**✅ {len(positive_results)} Positive Articles**")
+                # Show first 5
+                display_count = 5 if not st.session_state.show_more_positive else len(positive_results)
+                for r in positive_results[:display_count]:
+                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
-                    <b>{r['headline']}</b><br>
-                    📰 {r.get('source', 'Unknown')} | 🕐 {pub_date} | 🎯 {r['confidence']:.0f}% confident
+                    <b>{r['headline']}</b>
+                    <p></p>
+                    <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
                     </div>
                     """, unsafe_allow_html=True)
+                
+                if len(positive_results) > 5 and not st.session_state.show_more_positive:
+                    if st.button(f"📖 Show More ({len(positive_results) - 5} more)", key="show_more_pos"):
+                        st.session_state.show_more_positive = True
+                        st.rerun()
             else:
                 st.info("No positive news found")
         
         with tab2:
             neutral_results = [r for r in results if r["sentiment"] == "Neutral"]
             if neutral_results:
-                st.markdown(f"**� Total: {len(neutral_results)} neutral articles** | Showing up to 100")
-                for r in neutral_results[:100]:
-                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
+                st.markdown(f"**⚖️ {len(neutral_results)} Neutral Articles**")
+                # Show first 5
+                display_count = 5 if not st.session_state.show_more_neutral else len(neutral_results)
+                for r in neutral_results[:display_count]:
+                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
-                    <b>{r['headline']}</b><br>
-                    📰 {r.get('source', 'Unknown')} | 🕐 {pub_date} | 🎯 {r['confidence']:.0f}% confident
+                    <b>{r['headline']}</b>
+                    <p></p>
+                    <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
                     </div>
                     """, unsafe_allow_html=True)
+                
+                if len(neutral_results) > 5 and not st.session_state.show_more_neutral:
+                    if st.button(f"📖 Show More ({len(neutral_results) - 5} more)", key="show_more_neu"):
+                        st.session_state.show_more_neutral = True
+                        st.rerun()
             else:
                 st.info("No neutral news found")
         
         with tab3:
             negative_results = [r for r in results if r["sentiment"] == "Negative"]
             if negative_results:
-                st.markdown(f"**� Total: {len(negative_results)} negative articles** | Showing up to 100")
-                for r in negative_results[:100]:
-                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
+                st.markdown(f"**❌ {len(negative_results)} Negative Articles**")
+                # Show first 5
+                display_count = 5 if not st.session_state.show_more_negative else len(negative_results)
+                for r in negative_results[:display_count]:
+                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
-                    <b>{r['headline']}</b><br>
-                    📰 {r.get('source', 'Unknown')} | 🕐 {pub_date} | 🎯 {r['confidence']:.0f}% confident
+                    <b>{r['headline']}</b>
+                    <p></p>
+                    <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
                     </div>
                     """, unsafe_allow_html=True)
+                
+                if len(negative_results) > 5 and not st.session_state.show_more_negative:
+                    if st.button(f"📖 Show More ({len(negative_results) - 5} more)", key="show_more_neg"):
+                        st.session_state.show_more_negative = True
+                        st.rerun()
             else:
                 st.info("No negative news found")
         
@@ -804,45 +877,58 @@ if analyze_btn and company.strip():
                 currency_symbol = "₹" if is_indian else "$"
                 currency_label = "INR" if is_indian else stock_data['currency']
                 
-                # Display prices in original currency (no conversion)
-                display_price = stock_data['price']
-                display_high = stock_data['52w_high']
-                display_low = stock_data['52w_low']
+                # Display prices with validation
+                display_price = stock_data['price'] if stock_data['price'] > 0 else 0
+                display_high = stock_data['52w_high'] if stock_data['52w_high'] > 0 else 0
+                display_low = stock_data['52w_low'] if stock_data['52w_low'] > 0 else 0
+                pe_ratio = stock_data['pe_ratio'] if stock_data['pe_ratio'] > 0 else 0
                 
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("💵 Current", f"{currency_symbol}{display_price:,.2f}")
-                
-                with col2:
-                    st.metric("📈 52W High", f"{currency_symbol}{display_high:,.2f}")
-                
-                with col3:
-                    st.metric("📉 52W Low", f"{currency_symbol}{display_low:,.2f}")
-                
-                with col4:
-                    st.metric("P/E Ratio", f"{stock_data['pe_ratio']:.1f}")
-                
-                # Show currency info
-                st.markdown(f"""
-                <div style="background: #e8f4f8; padding: 10px; border-radius: 6px; font-size: 0.9em; margin: 10px 0;">
-                💱 <b>Currency:</b> {currency_label}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Chart
-                st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
-                period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
-                chart = plot_stock_chart(ticker, period)
-                if chart:
-                    st.pyplot(chart, use_container_width=True)
-                
+                # Only show metrics if data is valid
+                if display_price > 0:
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("💵 Current", f"{currency_symbol}{display_price:,.2f}")
+                    
+                    with col2:
+                        if display_high > 0:
+                            st.metric("📈 52W High", f"{currency_symbol}{display_high:,.2f}")
+                        else:
+                            st.metric("📈 52W High", "N/A")
+                    
+                    with col3:
+                        if display_low > 0:
+                            st.metric("📉 52W Low", f"{currency_symbol}{display_low:,.2f}")
+                        else:
+                            st.metric("📉 52W Low", "N/A")
+                    
+                    with col4:
+                        if pe_ratio > 0:
+                            st.metric("P/E Ratio", f"{pe_ratio:.1f}")
+                        else:
+                            st.metric("P/E Ratio", "N/A")
+                    
+                    # Show currency info
+                    st.markdown(f"""
+                    <div style="background: #e8f4f8; padding: 12px; border-radius: 8px; font-size: 0.9em; margin: 15px 0; color: #1a1a1a; border-left: 4px solid #667eea;">
+                    💱 <b>Currency:</b> {currency_label}
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.error(f"❌ Unable to fetch live price for {ticker}. Please check the ticker symbol (e.g., TSLA, AAPL, INFY).")
+                    # Chart
+                    st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
+                    period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
+                    chart = plot_stock_chart(ticker, period)
+                    if chart:
+                        st.pyplot(chart, use_container_width=True)
+                    
 
-                # ===== SENTIMENT & PRICE CORRELATION =====
-                st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
-                
-                # Analyze correlation
-                sentiment_price_analysis = analyze_sentiment_price_impact(ticker, results)
+                    # ===== SENTIMENT & PRICE CORRELATION =====
+                    st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
+                    
+                    # Analyze correlation
+                    sentiment_price_analysis = analyze_sentiment_price_impact(ticker, results)
                 
                 if sentiment_price_analysis:
                     # Combined chart
