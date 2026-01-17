@@ -343,6 +343,44 @@ if 'api_checked' not in st.session_state:
     else:
         st.session_state.api_status = "missing"
 
+# ============ STOCK DISCOVERY DATA ============
+STOCK_CATEGORIES = {
+    "🇮🇳 India (NSE)": [
+        ("Infosys Limited", "INFY"),
+        ("Tata Consultancy Services", "TCS"),
+        ("Reliance Industries", "RELIANCE"),
+        ("HDFC Bank", "HDFCBANK"),
+        ("ITC Limited", "ITC"),
+        ("Maruti Suzuki", "MARUTI"),
+        ("Axis Bank", "AXISBANK"),
+        ("ICICI Bank", "ICICIBANK"),
+        ("Bharti Airtel", "BHARTIARTL"),
+        ("Coal India", "COALINDIA"),
+    ],
+    "🇺🇸 USA (NASDAQ/NYSE)": [
+        ("Apple Inc.", "AAPL"),
+        ("Microsoft", "MSFT"),
+        ("Tesla Inc.", "TSLA"),
+        ("Google/Alphabet", "GOOGL"),
+        ("Amazon", "AMZN"),
+        ("Meta Platforms", "META"),
+        ("NVIDIA", "NVDA"),
+        ("Intel", "INTC"),
+        ("AMD", "AMD"),
+        ("Qualcomm", "QCOM"),
+    ],
+    "🌍 International": [
+        ("Toyota Motor", "7203.T"),
+        ("Samsung Electronics", "005930.KS"),
+        ("ASML Holdings", "ASML"),
+        ("SAP SE", "SAP"),
+        ("LVMH Moët", "LVMHF"),
+        ("Shell", "SHEL"),
+        ("Nestlé", "NSRGY"),
+        ("Unilever", "UL"),
+    ]
+}
+
 # ============ CORE FUNCTIONS ============
 def get_stock_news(company):
     """Fetch news from multiple queries - LIVE with maximum articles"""
@@ -430,40 +468,63 @@ def get_stock_news(company):
         return get_demo_news(company)
 
 def get_demo_news(company):
-    """Return sample/demo news data for demonstration"""
-    # Sample news for common stocks for demo purposes
-    demo_data = {
-        "tesla": [
-            {"title": f"{company} stock gains 2.5% on strong Q4 deliveries", "sentiment": "Positive", "source": {"name": "Market News"}, "publishedAt": "2026-01-18T10:30:00Z", "url": "https://example.com/1"},
-            {"title": f"{company} announces new battery technology breakthrough", "sentiment": "Positive", "source": {"name": "Tech Daily"}, "publishedAt": "2026-01-17T14:20:00Z", "url": "https://example.com/2"},
-            {"title": f"{company} faces supply chain challenges in Asia", "sentiment": "Negative", "source": {"name": "Global Trade"}, "publishedAt": "2026-01-16T09:15:00Z", "url": "https://example.com/3"},
-            {"title": f"{company} maintains leadership in EV market", "sentiment": "Positive", "source": {"name": "Auto Industry"}, "publishedAt": "2026-01-15T11:45:00Z", "url": "https://example.com/4"},
-            {"title": f"{company} stock price volatility continues amid competition", "sentiment": "Neutral", "source": {"name": "Finance Weekly"}, "publishedAt": "2026-01-14T13:30:00Z", "url": "https://example.com/5"},
-        ],
-        "apple": [
-            {"title": f"{company} iPhone 15 Pro sales exceed expectations", "sentiment": "Positive", "source": {"name": "Tech News"}, "publishedAt": "2026-01-18T08:00:00Z", "url": "https://example.com/1"},
-            {"title": f"{company} announces new AI features in latest update", "sentiment": "Positive", "source": {"name": "AI Daily"}, "publishedAt": "2026-01-17T12:00:00Z", "url": "https://example.com/2"},
-            {"title": f"{company} stock down 1.2% on regulatory concerns", "sentiment": "Negative", "source": {"name": "Regulatory News"}, "publishedAt": "2026-01-16T15:30:00Z", "url": "https://example.com/3"},
-            {"title": f"{company} expands services revenue stream significantly", "sentiment": "Positive", "source": {"name": "Business Insider"}, "publishedAt": "2026-01-15T10:20:00Z", "url": "https://example.com/4"},
-            {"title": f"{company} faces competitive pressure in Chinese market", "sentiment": "Negative", "source": {"name": "Asia Tech"}, "publishedAt": "2026-01-14T14:45:00Z", "url": "https://example.com/5"},
-        ],
-        "infosys": [
-            {"title": f"{company} Q3 results beat analyst expectations", "sentiment": "Positive", "source": {"name": "Stock Markets India"}, "publishedAt": "2026-01-18T09:30:00Z", "url": "https://example.com/1"},
-            {"title": f"{company} strengthens digital services portfolio", "sentiment": "Positive", "source": {"name": "IT News"}, "publishedAt": "2026-01-17T11:15:00Z", "url": "https://example.com/2"},
-            {"title": f"{company} faces headwinds in client spending", "sentiment": "Negative", "source": {"name": "Market Analysis"}, "publishedAt": "2026-01-16T10:45:00Z", "url": "https://example.com/3"},
-            {"title": f"{company} announces strong guidance for 2026", "sentiment": "Positive", "source": {"name": "Financial Times"}, "publishedAt": "2026-01-15T13:20:00Z", "url": "https://example.com/4"},
-            {"title": f"{company} stock shows stability in market volatility", "sentiment": "Neutral", "source": {"name": "Equity Research"}, "publishedAt": "2026-01-14T12:00:00Z", "url": "https://example.com/5"},
-        ],
-    }
-    
-    # Find matching company
+    """Return sample/demo news data for demonstration - 100+ articles"""
     company_lower = company.lower()
-    for key, articles in demo_data.items():
-        if key in company_lower:
-            return articles
     
-    # Generic sample if no match
-    return demo_data.get("tesla", [])  # Default fallback
+    # Generate many articles for each company
+    def generate_articles(company_name, count=120):
+        templates = [
+            f"{company_name} Q4 earnings beat expectations",
+            f"{company_name} launches new product line",
+            f"{company_name} stock hits new all-time high",
+            f"{company_name} receives analyst upgrade",
+            f"{company_name} expands into new markets",
+            f"{company_name} faces regulatory challenge",
+            f"{company_name} revenue growth slows",
+            f"{company_name} CEO makes major announcement",
+            f"{company_name} stock drops on profit warning",
+            f"{company_name} signs major partnership",
+            f"{company_name} invests in new technology",
+            f"{company_name} reports strong quarterly results",
+            f"{company_name} market share gains",
+            f"{company_name} introduces AI features",
+            f"{company_name} completes acquisition",
+        ]
+        sentiments = ["Positive", "Negative", "Neutral"]
+        sources = ["Reuters", "Bloomberg", "CNBC", "TechCrunch", "MarketWatch", "WSJ", "FT", "Yahoo Finance", "Associated Press", "AP News"]
+        
+        articles = []
+        for i in range(count):
+            template_idx = i % len(templates)
+            sentiment_idx = i % len(sentiments)
+            source_idx = i % len(sources)
+            
+            articles.append({
+                "title": templates[template_idx],
+                "sentiment": sentiments[sentiment_idx],
+                "source": {"name": sources[source_idx]},
+                "publishedAt": f"2026-01-{18 - (i // 24)%18}T{10 + (i % 12):02d}:{(i*7)%60:02d}:00Z",
+                "url": f"https://example.com/article/{i}"
+            })
+        
+        return articles
+    
+    # Return generated articles for matching company
+    if "tesla" in company_lower or "tsla" in company_lower:
+        return generate_articles(company, 150)
+    elif "apple" in company_lower or "aapl" in company_lower:
+        return generate_articles(company, 150)
+    elif "infosys" in company_lower or "infy" in company_lower:
+        return generate_articles(company, 150)
+    elif "microsoft" in company_lower or "msft" in company_lower:
+        return generate_articles(company, 150)
+    elif "google" in company_lower or "googl" in company_lower:
+        return generate_articles(company, 150)
+    elif "amazon" in company_lower or "amzn" in company_lower:
+        return generate_articles(company, 150)
+    else:
+        # Generic articles for any company
+        return generate_articles(company, 150)
 
 def analyze(text):
     """Analyze sentiment using FinBERT"""
@@ -999,138 +1060,92 @@ def get_correlation_interpretation(corr):
 with st.sidebar:
     st.markdown("### 📚 Stock Discovery")
     
-    discovery_tab = st.radio("Find a Stock:", ["Popular Stocks", "Search by Name", "About"], horizontal=False)
+    # Use button-based tabs instead of radio for better responsiveness
+    discovery_choice = st.segmented_control(
+        "Choose an option:",
+        ["Popular", "Search", "Help"],
+        default="Popular"
+    ) if hasattr(st, 'segmented_control') else st.radio(
+        "Choose an option:",
+        ["Popular", "Search", "Help"],
+        label_visibility="collapsed"
+    )
     
-    if discovery_tab == "Popular Stocks":
-        st.markdown("#### 🌍 Popular Stocks to Analyze")
+    st.markdown("---")
+    
+    if discovery_choice == "Popular" or discovery_choice == 0:
+        st.markdown("#### 🌍 Popular Stocks")
         
-        # Organize by category
-        categories = {
-            "🇮🇳 India (NSE)": [
-                ("Infosys Limited", "INFY"),
-                ("Tata Consultancy Services", "TCS"),
-                ("Reliance Industries", "RELIANCE"),
-                ("HDFC Bank", "HDFCBANK"),
-                ("ITC Limited", "ITC"),
-                ("Maruti Suzuki", "MARUTI"),
-                ("Axis Bank", "AXISBANK"),
-                ("ICICI Bank", "ICICIBANK"),
-                ("Bharti Airtel", "BHARTIARTL"),
-                ("Coal India", "COALINDIA"),
-            ],
-            "🇺🇸 USA (NASDAQ/NYSE)": [
-                ("Apple Inc.", "AAPL"),
-                ("Microsoft", "MSFT"),
-                ("Tesla Inc.", "TSLA"),
-                ("Google/Alphabet", "GOOGL"),
-                ("Amazon", "AMZN"),
-                ("Meta Platforms", "META"),
-                ("NVIDIA", "NVDA"),
-                ("Intel", "INTC"),
-                ("AMD", "AMD"),
-                ("Qualcomm", "QCOM"),
-            ],
-            "🌍 International": [
-                ("Toyota Motor", "7203.T"),
-                ("Samsung Electronics", "005930.KS"),
-                ("ASML Holdings", "ASML"),
-                ("SAP SE", "SAP"),
-                ("LVMH Moët", "LVMHF"),
-                ("Shell", "SHEL"),
-                ("Nestlé", "NSRGY"),
-                ("Unilever", "UL"),
-            ]
-        }
-        
-        for category, stocks in categories.items():
+        for category, stocks in STOCK_CATEGORIES.items():
             with st.expander(f"**{category}**", expanded=category == "🇮🇳 India (NSE)"):
                 for company_name, ticker in stocks:
                     col1, col2 = st.columns([3, 1])
                     with col1:
-                        st.markdown(f"**{company_name}**")
+                        st.markdown(f"{company_name} `({ticker})`")
                     with col2:
-                        if st.button("📊 Analyze", key=f"analyze_{ticker}", use_container_width=True):
-                            st.session_state.selected_company = company_name
+                        if st.button("👉", key=f"btn_{ticker}", help="Analyze this stock"):
+                            st.session_state.selected_company = company_name.split()[0]
                             st.session_state.selected_ticker = ticker
                             st.rerun()
     
-    elif discovery_tab == "Search by Name":
-        st.markdown("#### 🔍 Stock Search")
-        st.markdown("Can't remember the ticker? Search by company name!")
+    elif discovery_choice == "Search" or discovery_choice == 1:
+        st.markdown("#### 🔍 Find Stock")
         
-        search_query = st.text_input("Search company name or ticker:", placeholder="e.g., Apple, TSLA, Infosys")
+        search_query = st.text_input(
+            "Search by name or ticker:",
+            placeholder="Apple, TSLA, Infosys...",
+            label_visibility="collapsed"
+        )
         
-        if search_query and len(search_query) >= 2:
-            # Simple local search (no API needed)
+        if search_query and len(search_query) >= 1:
             all_stocks = []
-            for stocks in [stocks for category, stocks in categories.items()]:
+            for stocks in STOCK_CATEGORIES.values():
                 all_stocks.extend(stocks)
             
             query_lower = search_query.lower()
             results = [s for s in all_stocks if query_lower in s[0].lower() or query_lower in s[1].lower()]
             
             if results:
-                st.markdown(f"**Found {len(results)} matches:**")
-                for company_name, ticker in results:
-                    col1, col2, col3 = st.columns([2, 1, 1])
+                st.markdown(f"**Found {len(results)}:**")
+                for company_name, ticker in results[:15]:
+                    col1, col2 = st.columns([3, 1])
                     with col1:
-                        st.markdown(f"{company_name}")
+                        st.markdown(f"**{company_name}** `{ticker}`")
                     with col2:
-                        st.markdown(f"`{ticker}`")
-                    with col3:
-                        if st.button("✓ Select", key=f"select_{ticker}"):
-                            st.session_state.selected_company = company_name
+                        if st.button("→", key=f"search_{ticker}", help="Select"):
+                            st.session_state.selected_company = company_name.split()[0]
                             st.session_state.selected_ticker = ticker
                             st.rerun()
             else:
-                st.warning("No matches found. Try different keywords!")
+                st.info("No matches. Try different keywords!")
     
-    else:  # About
-        st.markdown("#### ℹ️ About This App")
+    else:  # Help
+        st.markdown("#### ℹ️ Help")
         st.markdown("""
-        **Stock Sentiment Analyzer** uses AI to analyze market sentiment from real-time news.
+        **Quick Start:**
+        1. Pick stock from Popular tab
+        2. Click the arrow button
+        3. App fills company name
+        4. Click Analyze
         
         **Features:**
-        - 🔴 LIVE stock prices (updates every 30 seconds)
-        - 📊 Professional candlestick charts
-        - 🤖 AI sentiment analysis (FinBERT)
-        - 📰 500+ articles analyzed
-        - 🔗 Sentiment-price correlation
-        - 🌍 Global stock support
+        - 🔴 LIVE prices (30s)
+        - 📊 Candlestick charts  
+        - 🤖 AI sentiment
+        - 📰 500+ articles
+        - 🔗 Correlation
         
-        **Data Sources:**
-        - yfinance: Real stock prices
-        - NewsAPI: News articles
-        - FinBERT: Sentiment analysis
+        **Setup API:**
+        - https://newsapi.org
+        - Add to secrets.toml
+        - NEWS_API_KEY = "key"
         
-        **Need Help?**
-        1. Add your NewsAPI key to `.streamlit/secrets.toml`
-        2. Get free key: https://newsapi.org
-        3. Use sidebar to discover stocks
-        
-        ⚠️ For educational purposes only. Not financial advice.
+        **Status:**
         """)
-        
-        st.markdown("---")
-        
-        # Check API status
-        if not API_KEY:
-            st.error("""
-            ❌ **NewsAPI Key Missing!**
-            
-            Without a valid API key, news-based sentiment analysis won't work.
-            
-            **Setup Instructions:**
-            1. Go to https://newsapi.org
-            2. Sign up (free)
-            3. Copy your API key
-            4. Edit `.streamlit/secrets.toml`
-            5. Replace `your_newsapi_key_here` with your key
-            6. Refresh the app
-            """)
-
-st.session_state.setdefault('selected_company', None)
-st.session_state.setdefault('selected_ticker', None)
+        if API_KEY:
+            st.success("✅ API Key: Valid")
+        else:
+            st.error("⚠️ API Key: Missing")
 
 # INPUT SECTION - Clean & Simple
 st.markdown('<div class="input-section">', unsafe_allow_html=True)
@@ -1140,51 +1155,34 @@ st.markdown("### 🔍 Analyze a Stock")
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    # Use selected stock from sidebar if available
-    if st.session_state.selected_company:
-        company = st.text_input(
-            "Company Name",
-            value=st.session_state.selected_company,
-            placeholder="E.g., Tesla, Apple, Infosys",
-            help="Type company name or select from sidebar",
-            label_visibility="visible"
-        )
-        st.session_state.selected_company = None  # Clear for next time
-    else:
-        company = st.text_input(
-            "Company Name",
-            placeholder="E.g., Tesla, Apple, Infosys",
-            help="Type company name or select from sidebar",
-            label_visibility="visible"
-        )
+    # Pre-fill from sidebar if selected
+    default_company = st.session_state.selected_company if st.session_state.selected_company else ""
+    company = st.text_input(
+        "Company Name",
+        value=default_company,
+        placeholder="E.g., Tesla, Apple, Infosys",
+        help="Type or select from sidebar →",
+        label_visibility="visible"
+    )
+    if company and st.session_state.selected_company:
+        st.session_state.selected_company = None
 
 with col2:
-    # Use selected ticker from sidebar if available
-    if st.session_state.selected_ticker:
-        ticker = st.text_input(
-            "Ticker Code",
-            value=st.session_state.selected_ticker,
-            placeholder="E.g., TSLA",
-            help="Optional stock ticker",
-            label_visibility="visible"
-        ).upper()
-        st.session_state.selected_ticker = None  # Clear for next time
-    else:
-        ticker = st.text_input(
-            "Ticker Code",
-            placeholder="E.g., TSLA",
-            help="Optional stock ticker",
-            label_visibility="visible"
-        ).upper()
+    # Pre-fill from sidebar if selected
+    default_ticker = st.session_state.selected_ticker if st.session_state.selected_ticker else ""
+    ticker = st.text_input(
+        "Ticker",
+        value=default_ticker,
+        placeholder="E.g., TSLA",
+        help="Optional",
+        label_visibility="visible"
+    ).upper()
+    if ticker and st.session_state.selected_ticker:
+        st.session_state.selected_ticker = None
 
-# Help text for users
-col_tip1, col_tip2 = st.columns([1, 1])
-with col_tip1:
-    st.caption("💡 **Tip:** Don't know the ticker? Use the sidebar to discover stocks")
-with col_tip2:
-    st.caption("🔐 **Note:** News analysis requires valid NewsAPI key in secrets")
+st.caption("💡 **Tip:** Use sidebar → Stock Discovery to find stocks by name")
 
-analyze_btn = st.button("🚀 Analyze Stock", use_container_width=True, type="primary")
+analyze_btn = st.button("🚀 ANALYZE", use_container_width=True, type="primary")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
