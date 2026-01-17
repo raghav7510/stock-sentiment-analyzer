@@ -608,7 +608,7 @@ def plot_stock_chart(ticker, period="1mo"):
         stock = yf.Ticker(ticker)
         hist = stock.history(period=period)
         
-        if hist.empty:
+        if hist.empty or len(hist) < 2:
             return None
         
         # Get country info
@@ -619,6 +619,11 @@ def plot_stock_chart(ticker, period="1mo"):
         except:
             country = 'US'
             currency = 'USD'
+        
+        # Better country detection
+        if 'NSE' in str(info.get('exchange', '')) or ticker.endswith('.NS') or ticker.endswith('.BO'):
+            country = 'India'
+            currency = 'INR'
         
         is_indian = country.upper() == 'INDIA'
         currency_symbol = "₹" if is_indian else "$"
@@ -667,8 +672,13 @@ def plot_stock_chart(ticker, period="1mo"):
         
         # Sync x-axis
         ax2.set_xlim(ax1.get_xlim())
-        ax2.set_xticks(range(0, len(hist), max(1, len(hist)//6)))
-        ax2.set_xticklabels([hist.index[i].strftime('%b %d') for i in range(0, len(hist), max(1, len(hist)//6))], rotation=45)
+        num_ticks = min(6, len(hist))
+        if num_ticks > 0:
+            ax2.set_xticks(range(0, len(hist), max(1, len(hist)//num_ticks)))
+            try:
+                ax2.set_xticklabels([hist.index[i].strftime('%b %d') for i in range(0, len(hist), max(1, len(hist)//num_ticks))], rotation=45)
+            except:
+                pass
         ax1.set_xticks([])
         
         # Add legend
@@ -684,7 +694,7 @@ def plot_stock_chart(ticker, period="1mo"):
                 transform=ax1.transAxes, fontsize=11, fontweight='bold', color=change_color,
                 verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
         
-        fig.tight_layout()
+        plt.tight_layout()
         return fig
     except Exception as e:
         return None
@@ -697,7 +707,10 @@ def analyze_sentiment_price_impact(ticker, results):
         # Get 1 month history
         hist = stock.history(period="1mo")
         
-        if hist.empty or not results:
+        if hist.empty or len(hist) < 5:
+            return None
+        
+        if not results or len(results) < 2:
             return None
         
         # Calculate daily returns
@@ -715,6 +728,9 @@ def analyze_sentiment_price_impact(ticker, results):
             except:
                 pass
         
+        if not sentiment_by_date:
+            return None
+        
         # Average sentiment per date
         daily_sentiment = {}
         for date, scores in sentiment_by_date.items():
@@ -725,17 +741,20 @@ def analyze_sentiment_price_impact(ticker, results):
             'daily_sentiment': daily_sentiment,
             'latest_return': hist['Daily_Return'].iloc[-1] if len(hist) > 0 else 0
         }
-    except:
+    except Exception as e:
         return None
 
 def plot_sentiment_price_correlation(ticker, analysis_data):
     """Plot sentiment vs price movement correlation"""
-    if not analysis_data or analysis_data['history'].empty:
+    if not analysis_data or analysis_data['history'].empty or len(analysis_data['history']) < 2:
         return None
     
     try:
         hist = analysis_data['history']
         daily_sentiment = analysis_data['daily_sentiment']
+        
+        if not daily_sentiment:
+            return None
         
         # Create figure with 2 subplots
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=False)
@@ -749,40 +768,46 @@ def plot_sentiment_price_correlation(ticker, analysis_data):
         ax1.legend(loc='upper left')
         
         # Subplot 2: Sentiment Score
-        if daily_sentiment:
-            dates = sorted(daily_sentiment.keys())
-            scores = [daily_sentiment[d] for d in dates]
-            colors_sentiment = ['#51CF66' if s > 0.1 else '#FF6B6B' if s < -0.1 else '#FFA94D' for s in scores]
-            
-            ax2.bar(dates, scores, color=colors_sentiment, alpha=0.7, label='Sentiment Score')
-            ax2.axhline(0, color='black', linestyle='-', linewidth=1)
-            ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold')
-            ax2.set_xlabel('Date', fontsize=11, fontweight='bold')
-            ax2.set_title('News Sentiment Trend', fontsize=12, fontweight='bold')
-            ax2.set_ylim([-1, 1])
-            ax2.grid(True, alpha=0.3, axis='y')
-            ax2.legend(loc='upper left')
+        dates = sorted(daily_sentiment.keys())
+        scores = [daily_sentiment[d] for d in dates]
+        colors_sentiment = ['#51CF66' if s > 0.1 else '#FF6B6B' if s < -0.1 else '#FFA94D' for s in scores]
+        
+        ax2.bar(dates, scores, color=colors_sentiment, alpha=0.7, label='Sentiment Score')
+        ax2.axhline(0, color='black', linestyle='-', linewidth=1)
+        ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold')
+        ax2.set_xlabel('Date', fontsize=11, fontweight='bold')
+        ax2.set_title('News Sentiment Trend', fontsize=12, fontweight='bold')
+        ax2.set_ylim([-1, 1])
+        ax2.grid(True, alpha=0.3, axis='y')
+        ax2.legend(loc='upper left')
         
         fig.tight_layout()
         return fig
     except Exception as e:
-        st.error(f"Error creating correlation chart: {str(e)}")
         return None
 
 def plot_combined_sentiment_price(ticker, analysis_data):
     """Plot combined sentiment and price with dual axis"""
-    if not analysis_data or analysis_data['history'].empty:
+    if not analysis_data or analysis_data['history'].empty or len(analysis_data['history']) < 2:
         return None
     
     try:
         hist = analysis_data['history']
         daily_sentiment = analysis_data['daily_sentiment']
         
+        if not daily_sentiment:
+            return None
+        
         # Get country info
         stock = yf.Ticker(ticker)
-        info = stock.info
-        country = info.get('country', 'US')
-        currency = info.get('currency', 'USD')
+        try:
+            info = stock.info
+            country = info.get('country', 'US')
+            currency = info.get('currency', 'USD')
+        except:
+            country = 'US'
+            currency = 'USD'
+        
         is_indian = country.upper() == 'INDIA'
         
         # Get currency symbol and label
@@ -805,15 +830,14 @@ def plot_combined_sentiment_price(ticker, analysis_data):
         # Create second y-axis for sentiment
         ax2 = ax1.twinx()
         
-        if daily_sentiment:
-            dates = sorted(daily_sentiment.keys())
-            scores = [daily_sentiment[d] for d in dates]
-            colors_sentiment = ['#51CF66' if s > 0.1 else '#FF6B6B' if s < -0.1 else '#FFA94D' for s in scores]
-            
-            ax2.bar(dates, scores, color=colors_sentiment, alpha=0.4, label='Sentiment', width=0.6)
-            ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold', color='#FF6B6B')
-            ax2.set_ylim([-1, 1])
-            ax2.tick_params(axis='y', labelcolor='#FF6B6B')
+        dates = sorted(daily_sentiment.keys())
+        scores = [daily_sentiment[d] for d in dates]
+        colors_sentiment = ['#51CF66' if s > 0.1 else '#FF6B6B' if s < -0.1 else '#FFA94D' for s in scores]
+        
+        ax2.bar(dates, scores, color=colors_sentiment, alpha=0.4, label='Sentiment', width=0.6)
+        ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold', color='#FF6B6B')
+        ax2.set_ylim([-1, 1])
+        ax2.tick_params(axis='y', labelcolor='#FF6B6B')
         
         ax1.set_title(f'{ticker}: Price & Sentiment Correlation', fontsize=13, fontweight='bold')
         
@@ -825,7 +849,6 @@ def plot_combined_sentiment_price(ticker, analysis_data):
         fig.tight_layout()
         return fig
     except Exception as e:
-        st.error(f"Error creating combined chart: {str(e)}")
         return None
 
 def calculate_sentiment_price_correlation(analysis_data):
@@ -1125,18 +1148,28 @@ if analyze_btn and company.strip():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Chart
+                    # Chart - Use the correct ticker with .NS if needed
+                    ticker_for_chart = stock_data.get('ticker_used', ticker)
                     st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
                     period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
-                    chart = plot_stock_chart(ticker, period)
-                    if chart:
-                        st.pyplot(chart, use_container_width=True)
+                    try:
+                        chart = plot_stock_chart(ticker_for_chart, period)
+                        if chart:
+                            st.pyplot(chart, use_container_width=True)
+                        else:
+                            st.warning("⚠️ Chart data not available for this ticker")
+                    except Exception as e:
+                        st.warning(f"⚠️ Unable to render chart: {str(e)[:60]}")
                     
                     # ===== SENTIMENT & PRICE CORRELATION =====
                     st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
                     
-                    # Analyze correlation
-                    sentiment_price_analysis = analyze_sentiment_price_impact(ticker, results)
+                    # Analyze correlation - Use correct ticker
+                    try:
+                        sentiment_price_analysis = analyze_sentiment_price_impact(ticker_for_chart, results)
+                    except Exception as e:
+                        st.warning(f"⚠️ Error analyzing sentiment-price correlation: {str(e)[:60]}")
+                        sentiment_price_analysis = None
                     
                     if sentiment_price_analysis:
                         # Combined chart
