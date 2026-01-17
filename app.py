@@ -44,6 +44,12 @@ if 'selected_company' not in st.session_state:
     st.session_state.selected_company = ""
 if 'selected_ticker' not in st.session_state:
     st.session_state.selected_ticker = ""
+if 'show_more_positive_main' not in st.session_state:
+    st.session_state.show_more_positive_main = False
+if 'show_more_neutral_main' not in st.session_state:
+    st.session_state.show_more_neutral_main = False
+if 'show_more_negative_main' not in st.session_state:
+    st.session_state.show_more_negative_main = False
 
 # ============ LOAD AI MODEL ============
 @st.cache_resource
@@ -610,36 +616,62 @@ def plot_stock_chart(ticker, period="1mo"):
         currency_symbol = "₹" if is_indian else "$"
         currency_label = "INR" if is_indian else currency
         
-        fig = plt.figure(figsize=(14, 7))
+        fig = plt.figure(figsize=(14, 7), facecolor='white')
         gs = fig.add_gridspec(3, 1, height_ratios=[3, 1, 0.05], hspace=0.3)
         
         ax1 = fig.add_subplot(gs[0])
         
+        # Professional candlestick styling (Zerodha/Groww style)
         for i, (date, row) in enumerate(hist.iterrows()):
             high = row['High']
             low = row['Low']
             open_ = row['Open']
             close = row['Close']
-            color = '#51CF66' if close >= open_ else '#FF6B6B'
             
-            ax1.plot([i, i], [low, high], color=color, linewidth=1, alpha=0.6)
-            ax1.bar(i, abs(close - open_), bottom=min(open_, close), width=0.6, color=color, alpha=0.8, edgecolor=color, linewidth=1)
+            # Color based on price movement
+            is_green = close >= open_
+            body_color = '#00C596' if is_green else '#FF4949'  # Professional green/red
+            wick_color = '#00C596' if is_green else '#FF4949'
+            
+            # Draw wick (high-low line)
+            ax1.plot([i, i], [low, high], color=wick_color, linewidth=1.5, alpha=0.9)
+            
+            # Draw body (open-close rectangle)
+            body_height = abs(close - open_)
+            body_bottom = min(open_, close)
+            if body_height > 0:
+                ax1.bar(i, body_height, bottom=body_bottom, width=0.7, color=body_color, alpha=0.95, edgecolor=wick_color, linewidth=1.2)
+            else:
+                # Draw thin line for no change
+                ax1.plot([i-0.35, i+0.35], [close, close], color=body_color, linewidth=2)
         
-        ax1.plot(range(len(hist)), hist['Close'], color='#667eea', linewidth=2.5, alpha=0.7, label='Close Price', zorder=5)
+        # Add smooth price line overlay
+        ax1.plot(range(len(hist)), hist['Close'], color='#1E90FF', linewidth=1.5, alpha=0.5, label='Close Price', zorder=5, linestyle='-')
         
-        ax1.set_title(f"📈 {ticker} - {currency_label} | LIVE PRICE CHART", fontsize=14, fontweight='bold', pad=15, color='#1a1a1a')
-        ax1.set_ylabel(f"Price ({currency_label})", fontsize=11, fontweight='bold')
+        # Professional styling
+        current_price = hist['Close'].iloc[-1]
+        ax1.set_title(f"📈 {ticker} - {currency_label} | Current: {currency_symbol}{current_price:,.2f}", 
+                     fontsize=14, fontweight='bold', pad=15, color='#1a1a1a')
+        ax1.set_ylabel(f"Price ({currency_label})", fontsize=11, fontweight='bold', color='#2c3e50')
         ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{currency_symbol}{x:,.0f}'))
-        ax1.grid(True, alpha=0.2, linestyle='--', linewidth=0.5)
-        ax1.set_facecolor('#fafbfc')
+        ax1.grid(True, alpha=0.1, linestyle='-', linewidth=0.7, color='#d0d0d0')
+        ax1.set_facecolor('#f8f9fa')
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['left'].set_color('#e0e0e0')
+        ax1.spines['bottom'].set_color('#e0e0e0')
         
         ax2 = fig.add_subplot(gs[1])
-        colors_vol = ['#51CF66' if close >= open_ else '#FF6B6B' for open_, close in zip(hist['Open'], hist['Close'])]
-        ax2.bar(range(len(hist)), hist['Volume'], color=colors_vol, alpha=0.5, width=0.8)
-        ax2.set_ylabel('Volume', fontsize=10, fontweight='bold')
+        colors_vol = ['#00C596' if close >= open_ else '#FF4949' for open_, close in zip(hist['Open'], hist['Close'])]
+        ax2.bar(range(len(hist)), hist['Volume'], color=colors_vol, alpha=0.65, width=0.8, edgecolor='none')
+        ax2.set_ylabel('Volume', fontsize=10, fontweight='bold', color='#2c3e50')
         ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x/1e6)}M' if x >= 1e6 else f'{int(x/1e3)}K'))
-        ax2.grid(True, alpha=0.2, linestyle='--', linewidth=0.5, axis='y')
-        ax2.set_facecolor('#fafbfc')
+        ax2.grid(True, alpha=0.1, linestyle='-', linewidth=0.7, axis='y', color='#d0d0d0')
+        ax2.set_facecolor('#f8f9fa')
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+        ax2.spines['left'].set_color('#e0e0e0')
+        ax2.spines['bottom'].set_color('#e0e0e0')
         
         ax2.set_xlim(ax1.get_xlim())
         num_ticks = min(6, len(hist))
@@ -651,18 +683,20 @@ def plot_stock_chart(ticker, period="1mo"):
                 pass
         ax1.set_xticks([])
         
-        current_price = hist['Close'].iloc[-1]
         prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
         change = current_price - prev_close
         change_pct = (change / prev_close * 100) if prev_close != 0 else 0
         
-        change_color = '#51CF66' if change >= 0 else '#FF6B6B'
+        change_color = '#00C596' if change >= 0 else '#FF4949'
         change_symbol = '+' if change >= 0 else ''
         
-        ax1.text(0.02, 0.98, f"Current: {currency_symbol}{current_price:,.2f} | Change: {change_symbol}{change:,.2f} ({change_symbol}{change_pct:.2f}%)",
-                transform=ax1.transAxes, fontsize=11, fontweight='bold', color=change_color,
-                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        # Add info box with styling
+        info_text = f"Current: {currency_symbol}{current_price:,.2f} | Change: {change_symbol}{change:,.2f} ({change_symbol}{change_pct:.2f}%)"
+        ax1.text(0.02, 0.97, info_text, transform=ax1.transAxes, fontsize=10, fontweight='bold', 
+                color=change_color, verticalalignment='top', 
+                bbox=dict(boxstyle='round,pad=0.8', facecolor='white', edgecolor=change_color, linewidth=2, alpha=0.95))
         
+        fig.patch.set_facecolor('white')
         plt.tight_layout()
         return fig
     except:
@@ -720,28 +754,41 @@ def plot_sentiment_price_correlation(ticker, analysis_data):
         if not daily_sentiment:
             return None
         
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=False)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), facecolor='white', sharex=False)
         
-        ax1.plot(hist.index, hist['Close'], linewidth=2, color='#667eea', label='Close Price')
-        ax1.fill_between(hist.index, hist['Close'], alpha=0.2, color='#667eea')
-        ax1.set_ylabel('Price ($)', fontsize=11, fontweight='bold')
-        ax1.set_title('Stock Price vs Sentiment Impact', fontsize=13, fontweight='bold')
-        ax1.grid(True, alpha=0.3)
-        ax1.legend(loc='upper left')
+        # Professional price chart
+        ax1.plot(hist.index, hist['Close'], linewidth=2.5, color='#1E90FF', label='Close Price', zorder=3)
+        ax1.fill_between(hist.index, hist['Close'], alpha=0.15, color='#1E90FF')
+        ax1.set_ylabel('Price ($)', fontsize=11, fontweight='bold', color='#2c3e50')
+        ax1.set_title('📈 Stock Price vs Sentiment Impact', fontsize=13, fontweight='bold', color='#2c3e50')
+        ax1.grid(True, alpha=0.1, linestyle='-', linewidth=0.7, color='#d0d0d0')
+        ax1.legend(loc='upper left', framealpha=0.95)
+        ax1.set_facecolor('#f8f9fa')
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['left'].set_color('#e0e0e0')
+        ax1.spines['bottom'].set_color('#e0e0e0')
         
+        # Sentiment bars
         dates = sorted(daily_sentiment.keys())
         scores = [daily_sentiment[d] for d in dates]
-        colors_sentiment = ['#51CF66' if s > 0.1 else '#FF6B6B' if s < -0.1 else '#FFA94D' for s in scores]
+        colors_sentiment = ['#00C596' if s > 0.1 else '#FF4949' if s < -0.1 else '#F39C12' for s in scores]
         
-        ax2.bar(dates, scores, color=colors_sentiment, alpha=0.7, label='Sentiment Score')
-        ax2.axhline(0, color='black', linestyle='-', linewidth=1)
-        ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold')
-        ax2.set_xlabel('Date', fontsize=11, fontweight='bold')
-        ax2.set_title('News Sentiment Trend', fontsize=12, fontweight='bold')
+        ax2.bar(dates, scores, color=colors_sentiment, alpha=0.75, label='Sentiment Score', edgecolor='none')
+        ax2.axhline(0, color='#2c3e50', linestyle='-', linewidth=1.5)
+        ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold', color='#2c3e50')
+        ax2.set_xlabel('Date', fontsize=11, fontweight='bold', color='#2c3e50')
+        ax2.set_title('📊 News Sentiment Trend', fontsize=12, fontweight='bold', color='#2c3e50')
         ax2.set_ylim([-1, 1])
-        ax2.grid(True, alpha=0.3, axis='y')
-        ax2.legend(loc='upper left')
+        ax2.grid(True, alpha=0.1, axis='y', linestyle='-', linewidth=0.7, color='#d0d0d0')
+        ax2.legend(loc='upper left', framealpha=0.95)
+        ax2.set_facecolor('#f8f9fa')
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+        ax2.spines['left'].set_color('#e0e0e0')
+        ax2.spines['bottom'].set_color('#e0e0e0')
         
+        fig.patch.set_facecolor('white')
         fig.tight_layout()
         return fig
     except:
@@ -774,33 +821,44 @@ def plot_combined_sentiment_price(ticker, analysis_data):
         
         close_prices = hist['Close'].values
         
-        fig, ax1 = plt.subplots(figsize=(12, 5))
+        fig, ax1 = plt.subplots(figsize=(13, 6), facecolor='white')
         
-        color = '#667eea'
-        ax1.set_xlabel('Date', fontsize=11, fontweight='bold')
-        ax1.set_ylabel(f'Stock Price ({currency_label})', color=color, fontsize=11, fontweight='bold')
-        ax1.plot(hist.index, close_prices, color=color, linewidth=2.5, label='Price')
-        ax1.tick_params(axis='y', labelcolor=color)
+        # Price line
+        color_price = '#1E90FF'
+        ax1.set_xlabel('Date', fontsize=11, fontweight='bold', color='#2c3e50')
+        ax1.set_ylabel(f'Stock Price ({currency_label})', color=color_price, fontsize=11, fontweight='bold')
+        ax1.plot(hist.index, close_prices, color=color_price, linewidth=2.8, label='Price', zorder=3, marker='o', markersize=5, markerfacecolor='white', markeredgewidth=2, markeredgecolor=color_price)
+        ax1.tick_params(axis='y', labelcolor=color_price)
         ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{currency_symbol}{x:,.0f}'))
-        ax1.grid(True, alpha=0.2)
+        ax1.grid(True, alpha=0.1, linestyle='-', linewidth=0.7, color='#d0d0d0')
+        ax1.set_facecolor('#f8f9fa')
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_color(color_price)
+        ax1.spines['left'].set_color(color_price)
+        ax1.spines['bottom'].set_color('#e0e0e0')
         
+        # Sentiment bars on secondary axis
         ax2 = ax1.twinx()
         
         dates = sorted(daily_sentiment.keys())
         scores = [daily_sentiment[d] for d in dates]
-        colors_sentiment = ['#51CF66' if s > 0.1 else '#FF6B6B' if s < -0.1 else '#FFA94D' for s in scores]
+        colors_sentiment = ['#00C596' if s > 0.1 else '#FF4949' if s < -0.1 else '#F39C12' for s in scores]
         
-        ax2.bar(dates, scores, color=colors_sentiment, alpha=0.4, label='Sentiment', width=0.6)
-        ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold', color='#FF6B6B')
+        ax2.bar(dates, scores, color=colors_sentiment, alpha=0.55, label='Sentiment', width=0.7, edgecolor='none')
+        ax2.set_ylabel('Sentiment Score', fontsize=11, fontweight='bold', color='#FF4949')
         ax2.set_ylim([-1, 1])
-        ax2.tick_params(axis='y', labelcolor='#FF6B6B')
+        ax2.tick_params(axis='y', labelcolor='#FF4949')
+        ax2.spines['right'].set_color('#FF4949')
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
         
-        ax1.set_title(f'{ticker}: Price & Sentiment Correlation', fontsize=13, fontweight='bold')
+        ax1.set_title(f'📊 {ticker}: Price & Sentiment Correlation (Live)', fontsize=13, fontweight='bold', color='#2c3e50')
         
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
-        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.95, fontsize=10)
         
+        fig.patch.set_facecolor('white')
         fig.tight_layout()
         return fig
     except:
@@ -1065,7 +1123,10 @@ if analyze_btn:
                 positive_results = [r for r in results if r["sentiment"] == "Positive"]
                 if positive_results:
                     st.markdown(f"**✅ {len(positive_results)} Positive Articles**")
-                    for r in positive_results[:10]:
+                    show_all_positive = st.session_state.show_more_positive_main
+                    display_count = len(positive_results) if show_all_positive else min(5, len(positive_results))
+                    
+                    for r in positive_results[:display_count]:
                         pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
                         st.markdown(f"""
                         <div class="news-item">
@@ -1073,6 +1134,11 @@ if analyze_btn:
                         <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
                         </div>
                         """, unsafe_allow_html=True)
+                    
+                    if len(positive_results) > 5 and not show_all_positive:
+                        if st.button(f"📂 Show {len(positive_results) - 5} more positive articles", key="show_more_pos"):
+                            st.session_state.show_more_positive_main = True
+                            st.rerun()
                 else:
                     st.info("No positive news found")
             
@@ -1080,7 +1146,10 @@ if analyze_btn:
                 neutral_results = [r for r in results if r["sentiment"] == "Neutral"]
                 if neutral_results:
                     st.markdown(f"**⚖️ {len(neutral_results)} Neutral Articles**")
-                    for r in neutral_results[:10]:
+                    show_all_neutral = st.session_state.show_more_neutral_main
+                    display_count = len(neutral_results) if show_all_neutral else min(5, len(neutral_results))
+                    
+                    for r in neutral_results[:display_count]:
                         pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
                         st.markdown(f"""
                         <div class="news-item">
@@ -1088,6 +1157,11 @@ if analyze_btn:
                         <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
                         </div>
                         """, unsafe_allow_html=True)
+                    
+                    if len(neutral_results) > 5 and not show_all_neutral:
+                        if st.button(f"📂 Show {len(neutral_results) - 5} more neutral articles", key="show_more_neu"):
+                            st.session_state.show_more_neutral_main = True
+                            st.rerun()
                 else:
                     st.info("No neutral news found")
             
@@ -1095,7 +1169,10 @@ if analyze_btn:
                 negative_results = [r for r in results if r["sentiment"] == "Negative"]
                 if negative_results:
                     st.markdown(f"**❌ {len(negative_results)} Negative Articles**")
-                    for r in negative_results[:10]:
+                    show_all_negative = st.session_state.show_more_negative_main
+                    display_count = len(negative_results) if show_all_negative else min(5, len(negative_results))
+                    
+                    for r in negative_results[:display_count]:
                         pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
                         st.markdown(f"""
                         <div class="news-item">
@@ -1103,6 +1180,11 @@ if analyze_btn:
                         <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
                         </div>
                         """, unsafe_allow_html=True)
+                    
+                    if len(negative_results) > 5 and not show_all_negative:
+                        if st.button(f"📂 Show {len(negative_results) - 5} more negative articles", key="show_more_neg"):
+                            st.session_state.show_more_negative_main = True
+                            st.rerun()
                 else:
                     st.info("No negative news found")
             
@@ -1128,7 +1210,17 @@ if analyze_btn:
             # Stock Price
             if ticker_clean:
                 st.markdown("<hr>", unsafe_allow_html=True)
-                st.markdown(f'<div class="section-header">💵 Live Stock Price: {ticker_clean}</div>', unsafe_allow_html=True)
+                
+                # Auto-refresh every 30 seconds
+                col_refresh_1, col_refresh_2, col_refresh_3 = st.columns([2, 1, 1])
+                with col_refresh_1:
+                    st.markdown(f'<div class="section-header">💵 Live Stock Price: {ticker_clean} 🔴 LIVE</div>', unsafe_allow_html=True)
+                with col_refresh_2:
+                    st.caption("⏱️ Updates every 5 min")
+                with col_refresh_3:
+                    if st.button("🔄 Refresh Now", key="refresh_price"):
+                        st.cache_data.clear()
+                        st.rerun()
                 
                 stock_data = get_stock_price(ticker_clean)
                 if stock_data and stock_data['price'] is not None:
