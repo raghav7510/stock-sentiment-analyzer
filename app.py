@@ -1292,224 +1292,222 @@ if analyze_btn:
             col_gauge = st.columns(1)[0]
             gauge_fig, gauge_ax = plt.subplots(figsize=(12, 2))
             gauge_ax.barh([0], [overall_score], color=['#FF6B6B' if overall_score < -0.3 else '#FFA94D' if overall_score < 0.3 else '#51CF66'], height=0.3)
-        gauge_ax.set_xlim([-1, 1])
-        gauge_ax.set_ylim([-0.5, 0.5])
-        gauge_ax.axvline(0, color='black', linestyle='-', linewidth=2)
-        gauge_ax.set_xticks([-1, -0.5, 0, 0.5, 1])
-        gauge_ax.set_xticklabels(['Bearish', '', 'Neutral', '', 'Bullish'])
-        gauge_ax.set_yticks([])
-        gauge_ax.text(overall_score, 0, f"  {overall_score:.2f}", ha='left', va='center', fontsize=12, fontweight='bold', color='white' if overall_score < -0.3 or overall_score > 0.3 else 'black')
-        gauge_fig.tight_layout()
-        st.pyplot(gauge_fig)
-        plt.close()
-        
-        # Metrics
-        col1, col2, col3, col4, col5 = st.columns(5)
-        
-        with col1:
-            st.metric("📰 Total Articles", total, help=f"Live articles analyzed from 12+ queries")
-        
-        with col2:
-            st.metric("📈 Positive", positive_count)
-        
-        with col3:
-            st.metric("⚖️ Neutral", neutral_count)
-        
-        with col4:
-            st.metric("📉 Negative", negative_count)
-        
-        with col5:
-            if overall_score > 0.3:
-                st.metric("🚀 Signal", "BULLISH")
-            elif overall_score < -0.3:
-                st.metric("📍 Signal", "BEARISH")
-            else:
-                st.metric("➡️ Signal", "NEUTRAL")
-        
-        # News breakdown tabs
-        st.markdown('<div class="section-header">📋 News by Sentiment</div>', unsafe_allow_html=True)
-        
-        tab1, tab2, tab3 = st.tabs([
-            f"🟢 Positive ({positive_count})",
-            f"🟠 Neutral ({neutral_count})",
-            f"🔴 Negative ({negative_count})"
-        ])
-        
-        with tab1:
-            positive_results = [r for r in results if r["sentiment"] == "Positive"]
-            if positive_results:
-                st.markdown(f"**✅ {len(positive_results)} Positive Articles**")
-                # Show first 5
-                display_count = 5 if not st.session_state.show_more_positive else len(positive_results)
-                for r in positive_results[:display_count]:
-                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
-                    st.markdown(f"""
-                    <div class="news-item">
-                    <b>{r['headline']}</b>
-                    <p></p>
-                    <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                if len(positive_results) > 5 and not st.session_state.show_more_positive:
-                    if st.button(f"📖 Show More ({len(positive_results) - 5} more)", key="show_more_pos"):
-                        st.session_state.show_more_positive = True
-                        st.rerun()
-            else:
-                st.info("No positive news found")
-        
-        with tab2:
-            neutral_results = [r for r in results if r["sentiment"] == "Neutral"]
-            if neutral_results:
-                st.markdown(f"**⚖️ {len(neutral_results)} Neutral Articles**")
-                # Show first 5
-                display_count = 5 if not st.session_state.show_more_neutral else len(neutral_results)
-                for r in neutral_results[:display_count]:
-                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
-                    st.markdown(f"""
-                    <div class="news-item">
-                    <b>{r['headline']}</b>
-                    <p></p>
-                    <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                if len(neutral_results) > 5 and not st.session_state.show_more_neutral:
-                    if st.button(f"📖 Show More ({len(neutral_results) - 5} more)", key="show_more_neu"):
-                        st.session_state.show_more_neutral = True
-                        st.rerun()
-            else:
-                st.info("No neutral news found")
-        
-        with tab3:
-            negative_results = [r for r in results if r["sentiment"] == "Negative"]
-            if negative_results:
-                st.markdown(f"**❌ {len(negative_results)} Negative Articles**")
-                # Show first 5
-                display_count = 5 if not st.session_state.show_more_negative else len(negative_results)
-                for r in negative_results[:display_count]:
-                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
-                    st.markdown(f"""
-                    <div class="news-item">
-                    <b>{r['headline']}</b>
-                    <p></p>
-                    <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                if len(negative_results) > 5 and not st.session_state.show_more_negative:
-                    if st.button(f"📖 Show More ({len(negative_results) - 5} more)", key="show_more_neg"):
-                        st.session_state.show_more_negative = True
-                        st.rerun()
-            else:
-                st.info("No negative news found")
-        
-        # Keywords
-        st.markdown('<div class="section-header">🔑 Top Keywords</div>', unsafe_allow_html=True)
-        
-        keywords = extract_keywords([r["headline"] for r in results], top_n=12)
-        if keywords:
-            col_kw1, col_kw2 = st.columns([2, 1])
-            with col_kw1:
-                fig, ax = plt.subplots(figsize=(10, 4))
-                kw_df = pd.DataFrame(list(keywords.items()), columns=["Keyword", "Count"]).sort_values("Count")
-                ax.barh(kw_df["Keyword"], kw_df["Count"], color='#667eea')
-                ax.set_xlabel("Frequency")
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close()
+            gauge_ax.set_xlim([-1, 1])
+            gauge_ax.set_ylim([-0.5, 0.5])
+            gauge_ax.axvline(0, color='black', linestyle='-', linewidth=2)
+            gauge_ax.set_xticks([-1, -0.5, 0, 0.5, 1])
+            gauge_ax.set_xticklabels(['Bearish', '', 'Neutral', '', 'Bullish'])
+            gauge_ax.set_yticks([])
+            gauge_ax.text(overall_score, 0, f"  {overall_score:.2f}", ha='left', va='center', fontsize=12, fontweight='bold', color='white' if overall_score < -0.3 or overall_score > 0.3 else 'black')
+            gauge_fig.tight_layout()
+            st.pyplot(gauge_fig)
+            plt.close()
             
-            with col_kw2:
-                st.markdown("**Top Keywords:**")
-                for kw, count in list(keywords.items())[:7]:
-                    st.markdown(f"• **{kw}** ({count})")
-        
-        # Stock Price (if ticker provided)
-        if ticker:
-            st.markdown("<hr>", unsafe_allow_html=True)
-            st.markdown(f'<div class="section-header">💵 Live Stock Price: {ticker}</div>', unsafe_allow_html=True)
+            # Metrics
+            col1, col2, col3, col4, col5 = st.columns(5)
             
-            stock_data = get_stock_price(ticker)
-            if stock_data:
-                # Get currency info
-                is_indian = stock_data['country'].upper() == 'INDIA'
-                currency_symbol = "₹" if is_indian else "$"
-                currency_label = "INR" if is_indian else stock_data['currency']
+            with col1:
+                st.metric("📰 Total Articles", total, help=f"Live articles analyzed from 12+ queries")
+            with col2:
+                st.metric("📈 Positive", positive_count)
+            
+            with col3:
+                st.metric("⚖️ Neutral", neutral_count)
+            
+            with col4:
+                st.metric("📉 Negative", negative_count)
+            
+            with col5:
+                if overall_score > 0.3:
+                    st.metric("🚀 Signal", "BULLISH")
+                elif overall_score < -0.3:
+                    st.metric("📍 Signal", "BEARISH")
+                else:
+                    st.metric("➡️ Signal", "NEUTRAL")
+            
+            # News breakdown tabs
+            st.markdown('<div class="section-header">📋 News by Sentiment</div>', unsafe_allow_html=True)
+            
+            tab1, tab2, tab3 = st.tabs([
+                f"🟢 Positive ({positive_count})",
+                f"🟠 Neutral ({neutral_count})",
+                f"🔴 Negative ({negative_count})"
+            ])
+            
+            with tab1:
+                positive_results = [r for r in results if r["sentiment"] == "Positive"]
+                if positive_results:
+                    st.markdown(f"**✅ {len(positive_results)} Positive Articles**")
+                    # Show first 5
+                    display_count = 5 if not st.session_state.show_more_positive else len(positive_results)
+                    for r in positive_results[:display_count]:
+                        pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
+                        st.markdown(f"""
+                        <div class="news-item">
+                        <b>{r['headline']}</b>
+                        <p></p>
+                        <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if len(positive_results) > 5 and not st.session_state.show_more_positive:
+                        if st.button(f"📖 Show More ({len(positive_results) - 5} more)", key="show_more_pos"):
+                            st.session_state.show_more_positive = True
+                            st.rerun()
+                else:
+                    st.info("No positive news found")
+            
+            with tab2:
+                neutral_results = [r for r in results if r["sentiment"] == "Neutral"]
+                if neutral_results:
+                    st.markdown(f"**⚖️ {len(neutral_results)} Neutral Articles**")
+                    # Show first 5
+                    display_count = 5 if not st.session_state.show_more_neutral else len(neutral_results)
+                    for r in neutral_results[:display_count]:
+                        pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
+                        st.markdown(f"""
+                        <div class="news-item">
+                        <b>{r['headline']}</b>
+                        <p></p>
+                        <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if len(neutral_results) > 5 and not st.session_state.show_more_neutral:
+                        if st.button(f"📖 Show More ({len(neutral_results) - 5} more)", key="show_more_neu"):
+                            st.session_state.show_more_neutral = True
+                            st.rerun()
+                else:
+                    st.info("No neutral news found")
+            
+            with tab3:
+                negative_results = [r for r in results if r["sentiment"] == "Negative"]
+                if negative_results:
+                    st.markdown(f"**❌ {len(negative_results)} Negative Articles**")
+                    # Show first 5
+                    display_count = 5 if not st.session_state.show_more_negative else len(negative_results)
+                    for r in negative_results[:display_count]:
+                        pub_date = pd.to_datetime(r.get('published', '')).strftime('%b %d, %H:%M') if r.get('published') else 'Unknown'
+                        st.markdown(f"""
+                        <div class="news-item">
+                        <b>{r['headline']}</b>
+                        <p></p>
+                        <div class="news-meta">📰 {r.get('source', 'Unknown')} • 🕐 {pub_date} • 🎯 {r['confidence']:.0f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if len(negative_results) > 5 and not st.session_state.show_more_negative:
+                        if st.button(f"📖 Show More ({len(negative_results) - 5} more)", key="show_more_neg"):
+                            st.session_state.show_more_negative = True
+                            st.rerun()
+                else:
+                    st.info("No negative news found")
+            
+            # Keywords
+            st.markdown('<div class="section-header">🔑 Top Keywords</div>', unsafe_allow_html=True)
+            
+            keywords = extract_keywords([r["headline"] for r in results], top_n=12)
+            if keywords:
+                col_kw1, col_kw2 = st.columns([2, 1])
+                with col_kw1:
+                    fig, ax = plt.subplots(figsize=(10, 4))
+                    kw_df = pd.DataFrame(list(keywords.items()), columns=["Keyword", "Count"]).sort_values("Count")
+                    ax.barh(kw_df["Keyword"], kw_df["Count"], color='#667eea')
+                    ax.set_xlabel("Frequency")
+                    fig.tight_layout()
+                    st.pyplot(fig)
+                    plt.close()
+                with col_kw2:
+                    st.markdown("**Top Keywords:**")
+                    for kw, count in list(keywords.items())[:7]:
+                        st.markdown(f"• **{kw}** ({count})")
+            
+            # Stock Price (if ticker provided)
+            if ticker_clean:
+                st.markdown("<hr>", unsafe_allow_html=True)
+                st.markdown(f'<div class="section-header">💵 Live Stock Price: {ticker_clean}</div>', unsafe_allow_html=True)
                 
-                # Only show metrics if data is valid
-                if stock_data['price'] is not None:
-                    col1, col2, col3, col4 = st.columns(4)
+                stock_data = get_stock_price(ticker_clean)
+                if stock_data:
+                    # Get currency info
+                    is_indian = stock_data['country'].upper() == 'INDIA'
+                    currency_symbol = "₹" if is_indian else "$"
+                    currency_label = "INR" if is_indian else stock_data['currency']
                     
-                    # Current price with change indicator
-                    with col1:
-                        change_display = f"{currency_symbol}{stock_data['change']:,.2f} ({stock_data['change_pct']:+.2f}%)"
-                        change_color = "green" if stock_data['change'] >= 0 else "red"
-                        st.metric("💵 Current Price", f"{currency_symbol}{stock_data['price']:,.2f}", delta=change_display, delta_color=change_color)
-                    
-                    with col2:
-                        if stock_data['52w_high'] is not None:
-                            st.metric("📈 52W High", f"{currency_symbol}{stock_data['52w_high']:,.2f}")
-                        else:
-                            st.metric("📈 52W High", "N/A")
-                    
-                    with col3:
-                        if stock_data['52w_low'] is not None:
-                            st.metric("📉 52W Low", f"{currency_symbol}{stock_data['52w_low']:,.2f}")
-                        else:
-                            st.metric("📉 52W Low", "N/A")
-                    
-                    with col4:
-                        if stock_data['pe_ratio'] is not None:
-                            st.metric("P/E Ratio", f"{stock_data['pe_ratio']:.1f}")
-                        else:
-                            st.metric("P/E Ratio", "N/A")
-                    
-                    # Show currency and volume info
-                    volume_str = f"{stock_data['volume']/1e6:.2f}M" if stock_data['volume'] >= 1e6 else f"{stock_data['volume']/1e3:.0f}K"
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 15px; border-radius: 12px; font-size: 0.9em; margin: 15px 0; color: #e0e0e0; border-left: 4px solid #667eea; border: 1px solid rgba(102, 126, 234, 0.2);">
-                    💱 <b>Currency:</b> {currency_label} | 📊 <b>Volume:</b> {volume_str} | 🌍 <b>Country:</b> {stock_data['country']}
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Chart - Use the correct ticker with .NS if needed
-                    ticker_for_chart = stock_data.get('ticker_used', ticker)
-                    st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
-                    period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
-                    try:
-                        chart = plot_stock_chart(ticker_for_chart, period)
-                        if chart:
-                            st.pyplot(chart, use_container_width=True)
-                        else:
-                            st.warning("⚠️ Chart data not available for this ticker")
-                    except Exception as e:
-                        st.warning(f"⚠️ Unable to render chart: {str(e)[:60]}")
-                    
-                    # ===== SENTIMENT & PRICE CORRELATION =====
-                    st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
-                    
-                    # Analyze correlation - Use correct ticker
-                    try:
-                        sentiment_price_analysis = analyze_sentiment_price_impact(ticker_for_chart, results)
-                    except Exception as e:
-                        st.warning(f"⚠️ Error analyzing sentiment-price correlation: {str(e)[:60]}")
-                        sentiment_price_analysis = None
-                    
-                    if sentiment_price_analysis:
-                        # Combined chart
-                        combined_chart = plot_combined_sentiment_price(ticker, sentiment_price_analysis)
-                        if combined_chart:
-                            st.pyplot(combined_chart, use_container_width=True)
+                    # Only show metrics if data is valid
+                    if stock_data['price'] is not None:
+                        col1, col2, col3, col4 = st.columns(4)
                         
-                        # Correlation metrics
-                        corr_analysis = calculate_sentiment_price_correlation(sentiment_price_analysis)
-                        if corr_analysis:
-                            col_corr1, col_corr2, col_corr3 = st.columns(3)
+                        # Current price with change indicator
+                        with col1:
+                            change_display = f"{currency_symbol}{stock_data['change']:,.2f} ({stock_data['change_pct']:+.2f}%)"
+                            change_color = "green" if stock_data['change'] >= 0 else "red"
+                            st.metric("💵 Current Price", f"{currency_symbol}{stock_data['price']:,.2f}", delta=change_display, delta_color=change_color)
+                        
+                        with col2:
+                            if stock_data['52w_high'] is not None:
+                                st.metric("📈 52W High", f"{currency_symbol}{stock_data['52w_high']:,.2f}")
+                            else:
+                                st.metric("📈 52W High", "N/A")
+                        
+                        with col3:
+                            if stock_data['52w_low'] is not None:
+                                st.metric("📉 52W Low", f"{currency_symbol}{stock_data['52w_low']:,.2f}")
+                            else:
+                                st.metric("📉 52W Low", "N/A")
+                        
+                        with col4:
+                            if stock_data['pe_ratio'] is not None:
+                                st.metric("P/E Ratio", f"{stock_data['pe_ratio']:.1f}")
+                            else:
+                                st.metric("P/E Ratio", "N/A")
+                        
+                        # Show currency and volume info
+                        volume_str = f"{stock_data['volume']/1e6:.2f}M" if stock_data['volume'] >= 1e6 else f"{stock_data['volume']/1e3:.0f}K"
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 15px; border-radius: 12px; font-size: 0.9em; margin: 15px 0; color: #e0e0e0; border-left: 4px solid #667eea; border: 1px solid rgba(102, 126, 234, 0.2);">
+                        💱 <b>Currency:</b> {currency_label} | 📊 <b>Volume:</b> {volume_str} | 🌍 <b>Country:</b> {stock_data['country']}
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Chart - Use the correct ticker with .NS if needed
+                        ticker_for_chart = stock_data.get('ticker_used', ticker_clean)
+                        st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
+                        period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
+                        try:
+                            chart = plot_stock_chart(ticker_for_chart, period)
+                            if chart:
+                                st.pyplot(chart, use_container_width=True)
+                            else:
+                                st.warning("⚠️ Chart data not available for this ticker")
+                        except Exception as e:
+                            st.warning(f"⚠️ Unable to render chart: {str(e)[:60]}")
+                        
+                        # ===== SENTIMENT & PRICE CORRELATION =====
+                        st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
+                        
+                        # Analyze correlation - Use correct ticker
+                        try:
+                            sentiment_price_analysis = analyze_sentiment_price_impact(ticker_for_chart, results)
+                        except Exception as e:
+                            st.warning(f"⚠️ Error analyzing sentiment-price correlation: {str(e)[:60]}")
+                            sentiment_price_analysis = None
+                        
+                        if sentiment_price_analysis:
+                            # Combined chart
+                            combined_chart = plot_combined_sentiment_price(ticker_for_chart, sentiment_price_analysis)
+                            if combined_chart:
+                                st.pyplot(combined_chart, use_container_width=True)
                             
-                            with col_corr1:
-                                corr_value = corr_analysis['correlation']
-                                corr_color = "🟢" if corr_value > 0 else "🔴" if corr_value < 0 else "⚪"
-                                st.metric("📊 Correlation", f"{corr_value:.2f}", corr_color)
+                            # Correlation metrics
+                            corr_analysis = calculate_sentiment_price_correlation(sentiment_price_analysis)
+                            if corr_analysis:
+                                col_corr1, col_corr2, col_corr3 = st.columns(3)
+                                
+                                with col_corr1:
+                                    corr_value = corr_analysis['correlation']
+                                    corr_color = "🟢" if corr_value > 0 else "🔴" if corr_value < 0 else "⚪"
+                                    st.metric("📊 Correlation", f"{corr_value:.2f}", corr_color)
                             
                             with col_corr2:
                                 st.metric("📈 Data Points", corr_analysis['data_points'])
