@@ -46,6 +46,10 @@ if 'neutral_count' not in st.session_state:
     st.session_state.neutral_count = 5
 if 'negative_count' not in st.session_state:
     st.session_state.negative_count = 5
+if 'selected_company' not in st.session_state:
+    st.session_state.selected_company = ""
+if 'selected_ticker' not in st.session_state:
+    st.session_state.selected_ticker = ""
 
 # ============ CUSTOM CSS ============
 st.markdown("""
