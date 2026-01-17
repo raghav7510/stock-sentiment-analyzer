@@ -460,9 +460,14 @@ def extract_keywords(texts, top_n=10):
     except:
         return {}
 
-@st.cache_data(ttl=30)
-def get_stock_price(ticker):
+@st.cache_data(ttl=300)  # Increased from 30s to 5 minutes to reduce rate limiting
+def get_stock_price(ticker, retry_count=0):
     try:
+        # Rate limiting protection - exponential backoff
+        if retry_count > 0:
+            wait_time = min(2 ** retry_count, 10)  # Max 10 seconds
+            time.sleep(wait_time)
+        
         original_ticker = ticker
         indian_tickers = [
             'INFY', 'TCS', 'RELIANCE', 'HDFCBANK', 'ITC', 'MARUTI',
@@ -564,11 +569,25 @@ def get_stock_price(ticker):
             'ticker_used': ticker
         }
     except Exception as e:
+        error_msg = str(e).lower()
+        
+        # Handle rate limiting with retry logic
+        if 'too many requests' in error_msg or '429' in error_msg or 'rate' in error_msg:
+            if retry_count < 2:
+                st.warning(f"⏳ Rate limited. Retrying... (Attempt {retry_count + 2}/3)")
+                return get_stock_price(ticker, retry_count + 1)
+            else:
+                st.warning(f"⚠️ Rate limit reached for {ticker}. Please try again in a few moments.")
+                return None
+        
         st.warning(f"⚠️ Error fetching {ticker}: {str(e)[:60]}")
         return None
 
 def plot_stock_chart(ticker, period="1mo"):
     try:
+        # Add small delay to prevent rate limiting
+        time.sleep(0.5)
+        
         stock = yf.Ticker(ticker)
         hist = stock.history(period=period)
         
