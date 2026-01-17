@@ -95,10 +95,11 @@ st.markdown("""
     .section-header {
         font-size: 1.6em;
         font-weight: 700;
-        color: #1a1a1a;
+        color: #667eea;
         border-bottom: 3px solid #667eea;
         padding-bottom: 12px;
         margin: 30px 0 20px 0;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
     
     .info-box {
