@@ -535,95 +535,82 @@ def get_demo_news(company):
         # Generic articles for any company
         return generate_articles(company, 150)
 
-def analyze(text):
-    """Analyze sentiment using FinBERT"""
-    if not tokenizer or not model:
-        return None, None, None
+# ============ SENTIMENT ANALYSIS - FRESH START ============
+
+def get_sentiment_from_model(headline):
+    """Analyze a single headline using FinBERT model"""
+    if not headline or len(headline) < 3:
+        return None, 0, 0
+    
+    if tokenizer is None or model is None:
+        return None, 0, 0
     
     try:
-        # Encode text
-        inputs = tokenizer.encode(text, return_tensors='pt', max_length=512, truncation=True)
+        # Tokenize
+        inputs = tokenizer.encode(headline, return_tensors='pt', max_length=512, truncation=True)
         
-        # Forward pass through model
+        # Get prediction
         with torch.no_grad():
-            outputs = model(inputs)
+            logits = model(inputs).logits
         
         # Get probabilities
-        probabilities = F.softmax(outputs.logits, dim=1)
-        confidence, prediction = torch.max(probabilities, 1)
+        probs = torch.nn.functional.softmax(logits, dim=1)[0]
+        confidence = float(probs.max().item())
+        prediction = int(probs.argmax().item())
         
-        labels = ["Negative", "Neutral", "Positive"]
-        sentiment = labels[prediction.item()]
+        # Map prediction to sentiment
+        sentiments = ["Negative", "Neutral", "Positive"]
+        sentiment = sentiments[prediction]
         
-        # Get score based on sentiment
-        if sentiment == "Positive":
-            score = float(probabilities[0][2].item())
-        elif sentiment == "Negative":
-            score = -float(probabilities[0][0].item())
-        else:
-            score = 0
+        # Calculate score (-1 to +1)
+        score = float(probs[2].item()) - float(probs[0].item())
         
-        return sentiment, score, float(confidence.item())
+        return sentiment, score, confidence
+        
     except Exception as e:
-        return None, None, None
+        print(f"Error analyzing '{headline}': {e}")
+        return None, 0, 0
 
-def analyze_news_sentiment(company):
-    """Batch analyze news articles - Always use FinBERT for analysis"""
-    try:
-        news_articles = get_stock_news(company)
-        st.info(f"📰 Got {len(news_articles)} articles. Starting analysis...")
-        
-        if not news_articles:
-            st.warning(f"❌ No news found for {company}")
-            return []
-        
-        if not tokenizer or not model:
-            st.error("❌ Model not loaded!")
-            return []
-        
-        results = []
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        success_count = 0
-        
-        for i, article in enumerate(news_articles):
-            headline = article.get("title", "")
-            
-            if not headline or len(headline) < 3:
-                continue
-            
-            sentiment, score, confidence = analyze(headline)
-            
-            if sentiment and sentiment in ["Positive", "Negative", "Neutral"]:
-                if isinstance(confidence, float):
-                    conf_value = confidence * 100
-                else:
-                    conf_value = float(confidence) if confidence else 75.0
-                
-                results.append({
-                    "headline": headline,
-                    "sentiment": sentiment,
-                    "score": score if isinstance(score, (int, float)) else 0,
-                    "confidence": min(100, max(0, conf_value)),
-                    "source": article.get("source", {}).get("name", "Unknown"),
-                    "published": article.get("publishedAt", "")
-                })
-                success_count += 1
-            
-            progress = (i + 1) / len(news_articles)
-            progress_bar.progress(progress)
-            status_text.text(f"Processing: {i+1}/{len(news_articles)} | Success: {success_count}")
-        
-        progress_bar.empty()
-        status_text.empty()
-        
-        st.info(f"✅ Analysis Complete: {success_count} articles analyzed!")
-        return results
-    except Exception as e:
-        st.error(f"❌ ERROR in sentiment analysis: {str(e)}")
-        import traceback
-        st.error(traceback.format_exc())
+
+def analyze_articles(company_name):
+    """Analyze all articles and return results"""
+    articles = get_stock_news(company_name)
+    
+    if not articles:
+        st.warning(f"No articles found for {company_name}")
         return []
+    
+    st.info(f"Found {len(articles)} articles. Analyzing sentiment...")
+    
+    results = []
+    progress_bar = st.progress(0)
+    status = st.empty()
+    
+    for idx, article in enumerate(articles):
+        title = article.get("title", "")
+        
+        if not title or len(title) < 3:
+            continue
+        
+        sentiment, score, confidence = get_sentiment_from_model(title)
+        
+        if sentiment:
+            results.append({
+                "headline": title,
+                "sentiment": sentiment,
+                "score": score,
+                "confidence": confidence,
+                "source": article.get("source", {}).get("name", "Unknown"),
+                "published": article.get("publishedAt", "")
+            })
+        
+        progress_bar.progress((idx + 1) / len(articles))
+        status.text(f"Analyzed {len(results)} articles...")
+    
+    progress_bar.empty()
+    status.empty()
+    
+    return results
 
 def overall_sentiment(results):
     """Calculate average sentiment score"""
@@ -1268,9 +1255,9 @@ if analyze_btn:
         st.markdown(f'<div class="section-header">📊 {company_clean.upper()} - Sentiment Analysis</div>', unsafe_allow_html=True)
         
         with st.spinner(f"⏳ Analyzing {company_clean}... (30-60 seconds)"):
-            results = analyze_news_sentiment(company_clean)
+            results = analyze_articles(company_clean)
         
-        st.error(f"🔍 DEBUG: Got {len(results)} results back from analyze_news_sentiment()")
+        st.error(f"🔍 DEBUG: Got {len(results)} results back")
         
         if results:
             # Overall Sentiment
