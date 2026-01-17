@@ -295,6 +295,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ============ MODEL LOADING (DO THIS FIRST!) ============
+@st.cache_resource
+def load_model():
+    """Load FinBERT model for sentiment analysis"""
+    try:
+        tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+        model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+        return tokenizer, model
+    except Exception as e:
+        try:
+            # Try loading from local directory
+            tokenizer = AutoTokenizer.from_pretrained("./finbert_sentiment_model")
+            model = AutoModelForSequenceClassification.from_pretrained("./finbert_sentiment_model")
+            return tokenizer, model
+        except:
+            return None, None
+
+tokenizer, model = load_model()
+
 # ============ PAGE TITLE ============
 st.markdown('<div class="main-title">📈 STOCK SENTIMENT ANALYZER</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">🚀 Enterprise-Grade Real-Time Analysis | 500+ Live Articles | AI-Powered Insights</div>', unsafe_allow_html=True)
@@ -316,25 +335,6 @@ with col_status_3:
     st.markdown(f'<div style="font-size: 0.8em; color: #667eea; font-weight: 600;">⚡ LIVE</div>', unsafe_allow_html=True)
 
 st.markdown("<hr style='margin: 12px 0;'>", unsafe_allow_html=True)
-
-# ============ MODEL LOADING ============
-@st.cache_resource
-def load_model():
-    """Load FinBERT model for sentiment analysis"""
-    try:
-        tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-        model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-        return tokenizer, model
-    except Exception as e:
-        try:
-            # Try loading from local directory
-            tokenizer = AutoTokenizer.from_pretrained("./finbert_sentiment_model")
-            model = AutoModelForSequenceClassification.from_pretrained("./finbert_sentiment_model")
-            return tokenizer, model
-        except:
-            return None, None
-
-tokenizer, model = load_model()
 
 # Get API key from secrets
 try:
