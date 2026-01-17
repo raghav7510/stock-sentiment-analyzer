@@ -571,36 +571,30 @@ def analyze_news_sentiment(company):
     """Batch analyze news articles - Always use FinBERT for analysis"""
     news_articles = get_stock_news(company)
     
+    st.info(f"📰 Got {len(news_articles)} articles. Starting analysis...")
+    
     if not news_articles:
-        st.warning(f"❌ No news found for {company}. Tips:\n- Try a different company name\n- Add your NewsAPI key to `.streamlit/secrets.toml`\n- Use the sidebar stock discovery feature")
+        st.warning(f"❌ No news found for {company}")
         return []
     
     if not tokenizer or not model:
-        st.error("❌ AI Model not loaded! Please refresh the page and wait for the model to load (30-60 seconds).")
-        st.info("Check the status at the top of the page - it should show '✅ MODEL READY'")
+        st.error("❌ Model not loaded!")
         return []
     
     results = []
     progress_bar = st.progress(0)
     status_text = st.empty()
-    error_count = 0
     success_count = 0
-    
-    debug_info = st.empty()
-    debug_info.write(f"📰 Processing {len(news_articles)} articles with FinBERT AI...")
     
     for i, article in enumerate(news_articles):
         headline = article.get("title", "")
         
         if not headline or len(headline) < 3:
-            error_count += 1
             continue
         
-        # ALWAYS use FinBERT for sentiment analysis
         sentiment, score, confidence = analyze(headline)
         
         if sentiment and sentiment in ["Positive", "Negative", "Neutral"]:
-            # Ensure confidence is a number 0-100
             if isinstance(confidence, float):
                 conf_value = confidence * 100
             else:
@@ -610,29 +604,20 @@ def analyze_news_sentiment(company):
                 "headline": headline,
                 "sentiment": sentiment,
                 "score": score if isinstance(score, (int, float)) else 0,
-                "confidence": min(100, max(0, conf_value)),  # Ensure 0-100
+                "confidence": min(100, max(0, conf_value)),
                 "source": article.get("source", {}).get("name", "Unknown"),
                 "published": article.get("publishedAt", "")
             })
             success_count += 1
-        else:
-            error_count += 1
         
         progress = (i + 1) / len(news_articles)
         progress_bar.progress(progress)
-        status_text.text(f"🔍 Processing: {i+1}/{len(news_articles)} | ✓ {success_count} | ⚠️ {error_count}")
+        status_text.text(f"Processing: {i+1}/{len(news_articles)} | Success: {success_count}")
     
     progress_bar.empty()
     status_text.empty()
-    debug_info.empty()
     
-    if results:
-        st.success(f"✅ Successfully analyzed {success_count}/{len(news_articles)} articles!")
-    else:
-        st.error(f"❌ Analysis failed!\n\n**Results:**\n- Processed: {len(news_articles)} articles\n- Successful: {success_count}\n- Failed: {error_count}\n\n**Debug Info:**\n- Tokenizer loaded: {tokenizer is not None}\n- Model loaded: {model is not None}\n\nPlease refresh the page and try again. The model may still be initializing.")
-    
-    return results
-    
+    st.info(f"✅ Analysis Complete: {success_count} articles analyzed!")
     return results
 
 def overall_sentiment(results):
