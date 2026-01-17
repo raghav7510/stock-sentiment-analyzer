@@ -569,56 +569,61 @@ def analyze(text):
 
 def analyze_news_sentiment(company):
     """Batch analyze news articles - Always use FinBERT for analysis"""
-    news_articles = get_stock_news(company)
-    
-    st.info(f"📰 Got {len(news_articles)} articles. Starting analysis...")
-    
-    if not news_articles:
-        st.warning(f"❌ No news found for {company}")
-        return []
-    
-    if not tokenizer or not model:
-        st.error("❌ Model not loaded!")
-        return []
-    
-    results = []
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    success_count = 0
-    
-    for i, article in enumerate(news_articles):
-        headline = article.get("title", "")
+    try:
+        news_articles = get_stock_news(company)
+        st.info(f"📰 Got {len(news_articles)} articles. Starting analysis...")
         
-        if not headline or len(headline) < 3:
-            continue
+        if not news_articles:
+            st.warning(f"❌ No news found for {company}")
+            return []
         
-        sentiment, score, confidence = analyze(headline)
+        if not tokenizer or not model:
+            st.error("❌ Model not loaded!")
+            return []
         
-        if sentiment and sentiment in ["Positive", "Negative", "Neutral"]:
-            if isinstance(confidence, float):
-                conf_value = confidence * 100
-            else:
-                conf_value = float(confidence) if confidence else 75.0
+        results = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        success_count = 0
+        
+        for i, article in enumerate(news_articles):
+            headline = article.get("title", "")
             
-            results.append({
-                "headline": headline,
-                "sentiment": sentiment,
-                "score": score if isinstance(score, (int, float)) else 0,
-                "confidence": min(100, max(0, conf_value)),
-                "source": article.get("source", {}).get("name", "Unknown"),
-                "published": article.get("publishedAt", "")
-            })
-            success_count += 1
+            if not headline or len(headline) < 3:
+                continue
+            
+            sentiment, score, confidence = analyze(headline)
+            
+            if sentiment and sentiment in ["Positive", "Negative", "Neutral"]:
+                if isinstance(confidence, float):
+                    conf_value = confidence * 100
+                else:
+                    conf_value = float(confidence) if confidence else 75.0
+                
+                results.append({
+                    "headline": headline,
+                    "sentiment": sentiment,
+                    "score": score if isinstance(score, (int, float)) else 0,
+                    "confidence": min(100, max(0, conf_value)),
+                    "source": article.get("source", {}).get("name", "Unknown"),
+                    "published": article.get("publishedAt", "")
+                })
+                success_count += 1
+            
+            progress = (i + 1) / len(news_articles)
+            progress_bar.progress(progress)
+            status_text.text(f"Processing: {i+1}/{len(news_articles)} | Success: {success_count}")
         
-        progress = (i + 1) / len(news_articles)
-        progress_bar.progress(progress)
-        status_text.text(f"Processing: {i+1}/{len(news_articles)} | Success: {success_count}")
-    
-    progress_bar.empty()
-    status_text.empty()
-    
-    st.info(f"✅ Analysis Complete: {success_count} articles analyzed!")
-    return results
+        progress_bar.empty()
+        status_text.empty()
+        
+        st.info(f"✅ Analysis Complete: {success_count} articles analyzed!")
+        return results
+    except Exception as e:
+        st.error(f"❌ ERROR in sentiment analysis: {str(e)}")
+        import traceback
+        st.error(traceback.format_exc())
+        return []
 
 def overall_sentiment(results):
     """Calculate average sentiment score"""
