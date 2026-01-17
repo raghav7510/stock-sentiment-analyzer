@@ -24,13 +24,16 @@ st.set_page_config(
     page_title="Stock Sentiment Analyzer",
     page_icon="📈",
     layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Initialize session state for auto-refresh
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = 0
-if 'auto_refresh' not in st.session_state:
-    st.session_state.auto_refresh = False
+# Initialize session state for live refresh
+if 'refresh_count' not in st.session_state:
+    st.session_state.refresh_count = 0
+if 'last_analysis_time' not in st.session_state:
+    st.session_state.last_analysis_time = None
+if 'auto_refresh_enabled' not in st.session_state:
+    st.session_state.auto_refresh_enabled = True
 
 # ============ CUSTOM CSS ============
 st.markdown("""
@@ -191,20 +194,19 @@ st.markdown("""
 
 # ============ PAGE TITLE ============
 st.markdown('<div class="main-title">📈 Stock Sentiment Analyzer</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">📡 Real-time analysis with live data from internet</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">📡 Real-time analysis with 500+ live articles from internet</div>', unsafe_allow_html=True)
 
-# Live status indicator
-col_status_1, col_status_2, col_status_3 = st.columns([1, 1, 2])
+# Live status indicator with refresh button
+col_status_1, col_status_2 = st.columns([3, 1])
 with col_status_1:
-    if st.button("🔄 Refresh Now", help="Fetch fresh data from internet"):
+    st.markdown(f'<div style="font-size: 0.9em; color: #27ae60; font-weight: 600;">🔴 LIVE MODE • Auto-updates every 60 sec • Refresh #{st.session_state.refresh_count} • 500+ Articles</div>', unsafe_allow_html=True)
+with col_status_2:
+    if st.button("🔄 Refresh Now", help="Fetch fresh data immediately"):
         st.cache_data.clear()
+        st.session_state.refresh_count += 1
         st.rerun()
 
-with col_status_2:
-    st.markdown('<div style="text-align: center; color: #51CF66; font-weight: bold;">🟢 LIVE MODE</div>', unsafe_allow_html=True)
-
-with col_status_3:
-    st.markdown('<div style="font-size: 0.85em; color: #7f8c8d;">⏱️ Updates: Every 60 seconds | Max 500+ articles</div>', unsafe_allow_html=True)
+st.markdown("<hr style='margin: 12px 0;'>", unsafe_allow_html=True)
 
 # ============ MODEL LOADING ============
 @st.cache_resource
@@ -359,9 +361,9 @@ def extract_keywords(texts, top_n=10):
     except:
         return {}
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60)  # 60 seconds - live updates
 def get_forex_rate():
-    """Fetch USD to INR exchange rate - LIVE"""
+    """Fetch USD to INR exchange rate"""
     try:
         url = "https://api.exchangerate-api.com/v4/latest/USD"
         r = requests.get(url, timeout=5).json()
@@ -369,7 +371,7 @@ def get_forex_rate():
     except:
         return 82.5  # Default rate
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60)  # 60 seconds - live stock price updates
 def get_stock_price(ticker):
     """Fetch live stock price"""
     try:
@@ -697,7 +699,7 @@ if analyze_btn and company.strip():
         col1, col2, col3, col4, col5 = st.columns(5)
         
         with col1:
-            st.metric("📰 Articles", total)
+            st.metric("📰 Total Articles", total, help=f"Live articles analyzed from 12+ queries")
         
         with col2:
             st.metric("📈 Positive", positive_count)
@@ -728,8 +730,8 @@ if analyze_btn and company.strip():
         with tab1:
             positive_results = [r for r in results if r["sentiment"] == "Positive"]
             if positive_results:
-                st.markdown(f"**📊 Total: {len(positive_results)} positive articles**")
-                for r in positive_results[:50]:
+                st.markdown(f"**� Total: {len(positive_results)} positive articles** | Showing up to 100")
+                for r in positive_results[:100]:
                     pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
@@ -743,8 +745,8 @@ if analyze_btn and company.strip():
         with tab2:
             neutral_results = [r for r in results if r["sentiment"] == "Neutral"]
             if neutral_results:
-                st.markdown(f"**📊 Total: {len(neutral_results)} neutral articles**")
-                for r in neutral_results[:50]:
+                st.markdown(f"**� Total: {len(neutral_results)} neutral articles** | Showing up to 100")
+                for r in neutral_results[:100]:
                     pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
@@ -758,8 +760,8 @@ if analyze_btn and company.strip():
         with tab3:
             negative_results = [r for r in results if r["sentiment"] == "Negative"]
             if negative_results:
-                st.markdown(f"**📊 Total: {len(negative_results)} negative articles**")
-                for r in negative_results[:50]:
+                st.markdown(f"**� Total: {len(negative_results)} negative articles** | Showing up to 100")
+                for r in negative_results[:100]:
                     pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
