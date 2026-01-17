@@ -1265,6 +1265,8 @@ if analyze_btn:
         with st.spinner(f"⏳ Analyzing {company_clean}... (30-60 seconds)"):
             results = analyze_news_sentiment(company_clean)
         
+        st.error(f"🔍 DEBUG: Got {len(results)} results back from analyze_news_sentiment()")
+        
         if results:
             # Overall Sentiment
             overall_score = overall_sentiment(results)
