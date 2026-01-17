@@ -60,18 +60,20 @@ st.markdown("""
     
     .main-title {
         text-align: center;
-        font-size: 2.8em;
-        font-weight: 700;
-        margin: 30px 0 10px 0;
+        font-size: 3.2em;
+        font-weight: 800;
+        margin: 40px 0 15px 0;
         color: #1a1a1a;
         letter-spacing: -0.5px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .subtitle {
         text-align: center;
-        font-size: 1em;
+        font-size: 1.15em;
         color: #555555;
-        margin-bottom: 30px;
+        margin-bottom: 10px;
+        font-weight: 500;
     }
     
     .input-section {
@@ -238,6 +240,9 @@ st.markdown("""
 # ============ PAGE TITLE ============
 st.markdown('<div class="main-title">📈 Stock Sentiment Analyzer</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">📡 Real-time analysis with 500+ live articles from internet</div>', unsafe_allow_html=True)
+
+# Visual separator
+st.markdown("<div style='height: 2px; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); margin: 20px 0; border-radius: 2px;'></div>", unsafe_allow_html=True)
 
 # Live status indicator with refresh button
 col_status_1, col_status_2 = st.columns([3, 1])
@@ -914,8 +919,7 @@ if analyze_btn and company.strip():
                     💱 <b>Currency:</b> {currency_label}
                     </div>
                     """, unsafe_allow_html=True)
-                else:
-                    st.error(f"❌ Unable to fetch live price for {ticker}. Please check the ticker symbol (e.g., TSLA, AAPL, INFY).")
+                    
                     # Chart
                     st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
                     period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
@@ -923,56 +927,55 @@ if analyze_btn and company.strip():
                     if chart:
                         st.pyplot(chart, use_container_width=True)
                     
-
                     # ===== SENTIMENT & PRICE CORRELATION =====
                     st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
                     
                     # Analyze correlation
                     sentiment_price_analysis = analyze_sentiment_price_impact(ticker, results)
-                
-                if sentiment_price_analysis:
-                    # Combined chart
-                    combined_chart = plot_combined_sentiment_price(ticker, sentiment_price_analysis)
-                    if combined_chart:
-                        st.pyplot(combined_chart, use_container_width=True)
                     
-                    # Correlation metrics
-                    corr_analysis = calculate_sentiment_price_correlation(sentiment_price_analysis)
-                    if corr_analysis:
-                        col_corr1, col_corr2, col_corr3 = st.columns(3)
+                    if sentiment_price_analysis:
+                        # Combined chart
+                        combined_chart = plot_combined_sentiment_price(ticker, sentiment_price_analysis)
+                        if combined_chart:
+                            st.pyplot(combined_chart, use_container_width=True)
                         
-                        with col_corr1:
-                            corr_value = corr_analysis['correlation']
-                            corr_color = "🟢" if corr_value > 0 else "🔴" if corr_value < 0 else "⚪"
-                            st.metric("📊 Correlation", f"{corr_value:.2f}", corr_color)
+                        # Correlation metrics
+                        corr_analysis = calculate_sentiment_price_correlation(sentiment_price_analysis)
+                        if corr_analysis:
+                            col_corr1, col_corr2, col_corr3 = st.columns(3)
+                            
+                            with col_corr1:
+                                corr_value = corr_analysis['correlation']
+                                corr_color = "🟢" if corr_value > 0 else "🔴" if corr_value < 0 else "⚪"
+                                st.metric("📊 Correlation", f"{corr_value:.2f}", corr_color)
+                            
+                            with col_corr2:
+                                st.metric("📈 Data Points", corr_analysis['data_points'])
+                            
+                            with col_corr3:
+                                latest_return = sentiment_price_analysis['latest_return']
+                                delta_color = "green" if latest_return > 0 else "red"
+                                st.metric("📊 Latest Return", f"{latest_return:.2f}%", delta=f"{latest_return:.2f}%")
+                            
+                            # Interpretation
+                            interpretation = corr_analysis['interpretation']
+                            st.markdown(f"""
+                            <div style="background: #f0f2f6; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <b>📌 Interpretation:</b><br>
+                            {interpretation}
+                            </div>
+                            """, unsafe_allow_html=True)
                         
-                        with col_corr2:
-                            st.metric("📈 Data Points", corr_analysis['data_points'])
+                        # Sentiment vs Price Relationship
+                        st.markdown('<div class="section-header">📊 Detailed Sentiment-Price Analysis</div>', unsafe_allow_html=True)
                         
-                        with col_corr3:
-                            latest_return = sentiment_price_analysis['latest_return']
-                            delta_color = "green" if latest_return > 0 else "red"
-                            st.metric("📊 Latest Return", f"{latest_return:.2f}%", delta=f"{latest_return:.2f}%")
-                        
-                        # Interpretation
-                        interpretation = corr_analysis['interpretation']
-                        st.markdown(f"""
-                        <div style="background: #f0f2f6; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                        <b>📌 Interpretation:</b><br>
-                        {interpretation}
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Sentiment vs Price Relationship
-                    st.markdown('<div class="section-header">📊 Detailed Sentiment-Price Analysis</div>', unsafe_allow_html=True)
-                    
-                    detail_chart = plot_sentiment_price_correlation(ticker, sentiment_price_analysis)
-                    if detail_chart:
-                        st.pyplot(detail_chart, use_container_width=True)
+                        detail_chart = plot_sentiment_price_correlation(ticker, sentiment_price_analysis)
+                        if detail_chart:
+                            st.pyplot(detail_chart, use_container_width=True)
+                    else:
+                        st.info("ℹ️ Analyzing sentiment-price relationship requires historical data. Try again in a moment.")
                 else:
-                    st.info("ℹ️ Analyzing sentiment-price relationship requires historical data. Try again in a moment.")
-            else:
-                st.error(f"Could not fetch data for {ticker}")
+                    st.error(f"❌ Unable to fetch live price for {ticker}. Please check the ticker symbol (e.g., TSLA, AAPL, INFY).")
     
     # ===== COMPARISON SECTION =====
     if company2.strip():
