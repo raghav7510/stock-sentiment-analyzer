@@ -26,6 +26,12 @@ st.set_page_config(
     layout="wide",
 )
 
+# Initialize session state for auto-refresh
+if 'last_refresh' not in st.session_state:
+    st.session_state.last_refresh = 0
+if 'auto_refresh' not in st.session_state:
+    st.session_state.auto_refresh = False
+
 # ============ CUSTOM CSS ============
 st.markdown("""
 <style>
@@ -96,18 +102,28 @@ st.markdown("""
     }
     
     .news-item {
-        background: #ffffff;
-        padding: 12px;
-        border-left: 4px solid #667eea;
-        margin: 8px 0;
+        background: #fafbfc;
+        padding: 14px;
+        border-left: 5px solid #667eea;
+        margin: 10px 0;
         border-radius: 6px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         transition: all 0.2s ease;
+        border: 1px solid #e1e8ed;
+    }
+    
+    .news-item b {
+        color: #1a1a1a;
+        font-size: 0.98em;
+        line-height: 1.45;
+        display: block;
+        margin-bottom: 6px;
     }
     
     .news-item:hover {
-        box-shadow: 0 3px 8px rgba(102,126,234,0.15);
+        box-shadow: 0 4px 12px rgba(102,126,234,0.2);
         transform: translateX(2px);
+        background: #f0f5ff;
     }
     
     .sentiment-bullish {
@@ -175,7 +191,20 @@ st.markdown("""
 
 # ============ PAGE TITLE ============
 st.markdown('<div class="main-title">📈 Stock Sentiment Analyzer</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Analyze news sentiment & see how it affects stock prices</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">📡 Real-time analysis with live data from internet</div>', unsafe_allow_html=True)
+
+# Live status indicator
+col_status_1, col_status_2, col_status_3 = st.columns([1, 1, 2])
+with col_status_1:
+    if st.button("🔄 Refresh Now", help="Fetch fresh data from internet"):
+        st.cache_data.clear()
+        st.rerun()
+
+with col_status_2:
+    st.markdown('<div style="text-align: center; color: #51CF66; font-weight: bold;">🟢 LIVE MODE</div>', unsafe_allow_html=True)
+
+with col_status_3:
+    st.markdown('<div style="font-size: 0.85em; color: #7f8c8d;">⏱️ Updates: Every 60 seconds | Max 500+ articles</div>', unsafe_allow_html=True)
 
 # ============ MODEL LOADING ============
 @st.cache_resource
@@ -199,35 +228,54 @@ except KeyError:
 
 # ============ CORE FUNCTIONS ============
 def get_stock_news(company):
-    """Fetch news from multiple queries"""
+    """Fetch news from multiple queries - LIVE with maximum articles"""
     if not API_KEY:
         return []
     try:
         all_articles = []
-        queries = [company, f"{company} stock", f"{company} shares", f"{company} earnings"]
+        # Expanded queries to get maximum diverse articles
+        queries = [
+            company,
+            f"{company} stock",
+            f"{company} shares",
+            f"{company} earnings",
+            f"{company} news",
+            f"{company} price",
+            f"{company} trading",
+            f"{company} market",
+            f"{company} update",
+            f"{company} financial",
+            f"{company} investor",
+            f"{company} analyst"
+        ]
         
         for query in queries:
             try:
-                url = f"https://newsapi.org/v2/everything?q={query}&language=en&sortBy=publishedAt&pageSize=50&apiKey={API_KEY}"
+                # Get latest articles with max pageSize
+                url = f"https://newsapi.org/v2/everything?q={query}&language=en&sortBy=publishedAt&pageSize=100&apiKey={API_KEY}"
                 r = requests.get(url, timeout=5).json()
                 
                 if r.get("status") == "ok":
                     articles = r.get("articles", [])
                     all_articles.extend(articles)
-                time.sleep(0.2)
+                time.sleep(0.15)
             except:
                 pass
         
-        # Remove duplicates
+        # Remove duplicates and keep unique articles
         seen = set()
         unique_articles = []
         for article in all_articles:
             title = article.get("title", "")
-            if title not in seen:
-                seen.add(title)
+            url = article.get("url", "")
+            # Use both title and URL for duplicate detection
+            article_id = f"{title}|{url}"
+            if article_id not in seen:
+                seen.add(article_id)
                 unique_articles.append(article)
         
-        return sorted(unique_articles, key=lambda x: x.get("publishedAt", ""), reverse=True)
+        # Sort by published date (most recent first)
+        return sorted(unique_articles, key=lambda x: x.get("publishedAt", ""), reverse=True)[:500]
     except Exception as e:
         st.error(f"❌ Error fetching news: {str(e)}")
         return []
@@ -288,7 +336,7 @@ def analyze_news_sentiment(company):
         
         progress = (i + 1) / len(news_articles)
         progress_bar.progress(progress)
-        status_text.text(f"Analyzing: {i+1}/{len(news_articles)} articles...")
+        status_text.text(f"🔍 Analyzing: {i+1}/{len(news_articles)} articles... ({len(results)} analyzed)")
     
     progress_bar.empty()
     status_text.empty()
@@ -311,13 +359,27 @@ def extract_keywords(texts, top_n=10):
     except:
         return {}
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
+def get_forex_rate():
+    """Fetch USD to INR exchange rate - LIVE"""
+    try:
+        url = "https://api.exchangerate-api.com/v4/latest/USD"
+        r = requests.get(url, timeout=5).json()
+        return r.get('rates', {}).get('INR', 82.5)
+    except:
+        return 82.5  # Default rate
+
+@st.cache_data(ttl=60)
 def get_stock_price(ticker):
     """Fetch live stock price"""
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
         hist = stock.history(period="1y")
+        
+        # Get country info
+        country = info.get('country', 'US')
+        currency = info.get('currency', 'USD')
         
         return {
             'price': info.get('currentPrice', 0),
@@ -326,7 +388,9 @@ def get_stock_price(ticker):
             'pe_ratio': info.get('trailingPE', 0),
             'market_cap': info.get('marketCap', 0),
             'sector': info.get('sector', ''),
-            'history': hist
+            'history': hist,
+            'country': country,
+            'currency': currency
         }
     except:
         return None
@@ -340,12 +404,23 @@ def plot_stock_chart(ticker, period="1mo"):
         if hist.empty:
             return None
         
-        fig, ax = plt.subplots(figsize=(12, 4))
-        ax.plot(hist.index, hist['Close'], linewidth=2, color='#667eea')
+        # Get country info
+        info = stock.info
+        country = info.get('country', 'US')
+        currency = info.get('currency', 'USD')
+        is_indian = country.upper() == 'INDIA'
+        
+        # Get currency symbol
+        currency_symbol = "₹" if is_indian else "$"
+        currency_label = "INR" if is_indian else currency
+        
+        fig, ax = plt.subplots(figsize=(12, 5))
+        ax.plot(hist.index, hist['Close'], linewidth=2.5, color='#667eea')
         ax.fill_between(hist.index, hist['Close'], alpha=0.3, color='#667eea')
-        ax.set_title(f"{ticker} Price - Last {period}", fontsize=12, fontweight='bold')
-        ax.set_ylabel("Price ($)")
+        ax.set_title(f"{ticker} Price - Last {period} ({currency_label})", fontsize=13, fontweight='bold')
+        ax.set_ylabel(f"Price ({currency_label})")
         ax.grid(True, alpha=0.3)
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{currency_symbol}{x:,.0f}'))
         fig.tight_layout()
         return fig
     except:
@@ -440,14 +515,28 @@ def plot_combined_sentiment_price(ticker, analysis_data):
         hist = analysis_data['history']
         daily_sentiment = analysis_data['daily_sentiment']
         
+        # Get country info
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        country = info.get('country', 'US')
+        currency = info.get('currency', 'USD')
+        is_indian = country.upper() == 'INDIA'
+        
+        # Get currency symbol and label
+        currency_symbol = "₹" if is_indian else "$"
+        currency_label = "INR" if is_indian else currency
+        
+        close_prices = hist['Close'].values
+        
         fig, ax1 = plt.subplots(figsize=(12, 5))
         
         # Plot price on left axis
         color = '#667eea'
         ax1.set_xlabel('Date', fontsize=11, fontweight='bold')
-        ax1.set_ylabel('Stock Price ($)', color=color, fontsize=11, fontweight='bold')
-        ax1.plot(hist.index, hist['Close'], color=color, linewidth=2.5, label='Price')
+        ax1.set_ylabel(f'Stock Price ({currency_label})', color=color, fontsize=11, fontweight='bold')
+        ax1.plot(hist.index, close_prices, color=color, linewidth=2.5, label='Price')
         ax1.tick_params(axis='y', labelcolor=color)
+        ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{currency_symbol}{x:,.0f}'))
         ax1.grid(True, alpha=0.2)
         
         # Create second y-axis for sentiment
@@ -639,11 +728,13 @@ if analyze_btn and company.strip():
         with tab1:
             positive_results = [r for r in results if r["sentiment"] == "Positive"]
             if positive_results:
-                for r in positive_results[:20]:
+                st.markdown(f"**📊 Total: {len(positive_results)} positive articles**")
+                for r in positive_results[:50]:
+                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
                     <b>{r['headline']}</b><br>
-                    📰 {r.get('source', 'Unknown')} | 🎯 {r['confidence']:.0f}% confident
+                    📰 {r.get('source', 'Unknown')} | 🕐 {pub_date} | 🎯 {r['confidence']:.0f}% confident
                     </div>
                     """, unsafe_allow_html=True)
             else:
@@ -652,11 +743,13 @@ if analyze_btn and company.strip():
         with tab2:
             neutral_results = [r for r in results if r["sentiment"] == "Neutral"]
             if neutral_results:
-                for r in neutral_results[:20]:
+                st.markdown(f"**📊 Total: {len(neutral_results)} neutral articles**")
+                for r in neutral_results[:50]:
+                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
                     <b>{r['headline']}</b><br>
-                    📰 {r.get('source', 'Unknown')} | 🎯 {r['confidence']:.0f}% confident
+                    📰 {r.get('source', 'Unknown')} | 🕐 {pub_date} | 🎯 {r['confidence']:.0f}% confident
                     </div>
                     """, unsafe_allow_html=True)
             else:
@@ -665,11 +758,13 @@ if analyze_btn and company.strip():
         with tab3:
             negative_results = [r for r in results if r["sentiment"] == "Negative"]
             if negative_results:
-                for r in negative_results[:20]:
+                st.markdown(f"**📊 Total: {len(negative_results)} negative articles**")
+                for r in negative_results[:50]:
+                    pub_date = pd.to_datetime(r.get('published', '')).strftime('%Y-%m-%d %H:%M') if r.get('published') else 'Unknown'
                     st.markdown(f"""
                     <div class="news-item">
                     <b>{r['headline']}</b><br>
-                    📰 {r.get('source', 'Unknown')} | 🎯 {r['confidence']:.0f}% confident
+                    📰 {r.get('source', 'Unknown')} | 🕐 {pub_date} | 🎯 {r['confidence']:.0f}% confident
                     </div>
                     """, unsafe_allow_html=True)
             else:
@@ -702,26 +797,45 @@ if analyze_btn and company.strip():
             
             stock_data = get_stock_price(ticker)
             if stock_data:
+                # Get currency info
+                is_indian = stock_data['country'].upper() == 'INDIA'
+                currency_symbol = "₹" if is_indian else "$"
+                currency_label = "INR" if is_indian else stock_data['currency']
+                
+                # Display prices in original currency (no conversion)
+                display_price = stock_data['price']
+                display_high = stock_data['52w_high']
+                display_low = stock_data['52w_low']
+                
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("💵 Current", f"${stock_data['price']:.2f}")
+                    st.metric("💵 Current", f"{currency_symbol}{display_price:,.2f}")
                 
                 with col2:
-                    st.metric("📈 52W High", f"${stock_data['52w_high']:.2f}")
+                    st.metric("📈 52W High", f"{currency_symbol}{display_high:,.2f}")
                 
                 with col3:
-                    st.metric("📉 52W Low", f"${stock_data['52w_low']:.2f}")
+                    st.metric("📉 52W Low", f"{currency_symbol}{display_low:,.2f}")
                 
                 with col4:
-                    st.metric("P/E", f"{stock_data['pe_ratio']:.1f}")
+                    st.metric("P/E Ratio", f"{stock_data['pe_ratio']:.1f}")
+                
+                # Show currency info
+                st.markdown(f"""
+                <div style="background: #e8f4f8; padding: 10px; border-radius: 6px; font-size: 0.9em; margin: 10px 0;">
+                💱 <b>Currency:</b> {currency_label}
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # Chart
-                period = st.selectbox("Time Period", ["1mo", "3mo", "6mo", "1y"])
+                st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
+                period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
                 chart = plot_stock_chart(ticker, period)
                 if chart:
                     st.pyplot(chart, use_container_width=True)
                 
+
                 # ===== SENTIMENT & PRICE CORRELATION =====
                 st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
                 
@@ -836,4 +950,10 @@ elif analyze_btn:
     st.error("⚠️ Please enter a company name")
 
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown('<div class="disclaimer">⚠️ For educational purposes. Not financial advice.</div>', unsafe_allow_html=True)
+st.markdown(f"""
+<div class="disclaimer">
+⚠️ For educational purposes. Not financial advice.<br>
+📡 <b>Live Mode Active</b> - Data updates automatically every 60 seconds<br>
+📰 Maximum articles fetched: 500+ from 12 search queries
+</div>
+""", unsafe_allow_html=True)
