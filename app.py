@@ -532,6 +532,7 @@ def get_demo_news(company):
 def analyze(text):
     """Analyze sentiment using FinBERT"""
     if not tokenizer or not model:
+        st.warning("⚠️ Model loading... Please wait or try again in a moment")
         return None, None, None
     
     try:
@@ -563,6 +564,10 @@ def analyze_news_sentiment(company):
     
     if not news_articles:
         st.warning(f"❌ No news found for {company}. Tips:\n- Try a different company name\n- Add your NewsAPI key to `.streamlit/secrets.toml`\n- Use the sidebar stock discovery feature")
+        return []
+    
+    if not tokenizer or not model:
+        st.error("❌ AI Model is loading... This may take 30-60 seconds on first run. Please wait or refresh the page.")
         return []
     
     results = []
@@ -599,13 +604,15 @@ def analyze_news_sentiment(company):
         
         progress = (i + 1) / len(news_articles)
         progress_bar.progress(progress)
-        status_text.text(f"🔍 Analyzing: {i+1}/{len(news_articles)} articles... ({len(results)} analyzed)")
+        status_text.text(f"🔍 Analyzing: {i+1}/{len(news_articles)} articles... ({len(results)} ✓ analyzed, {error_count} errors)")
     
     progress_bar.empty()
     status_text.empty()
     
-    if not results:
-        st.error(f"❌ Could not analyze any articles ({error_count} errors). Model may be loading. Try again.")
+    if not results and error_count > 0:
+        st.error(f"❌ Model failed to analyze articles. Model may still be loading. Analyzed {len(results)}, Errors: {error_count}. Please refresh or try again in a moment.")
+    elif not results:
+        st.warning("⚠️ No articles available for analysis.")
     
     return results
 
@@ -1187,8 +1194,6 @@ with col1:
         help="Type or select from sidebar →",
         label_visibility="visible"
     )
-    if company and st.session_state.selected_company:
-        st.session_state.selected_company = None
 
 with col2:
     # Pre-fill from sidebar if selected
@@ -1200,8 +1205,6 @@ with col2:
         help="Optional",
         label_visibility="visible"
     ).upper()
-    if ticker and st.session_state.selected_ticker:
-        st.session_state.selected_ticker = None
 
 st.caption("💡 **Tip:** Use sidebar → Stock Discovery to find stocks by name")
 
@@ -1224,41 +1227,52 @@ with st.expander("➕ Compare with another stock? (Optional)"):
         ticker2 = st.text_input("Ticker", placeholder="", key="ticker2").upper()
 
 # ============ ANALYSIS SECTION ============
-if analyze_btn and company.strip():
-    st.markdown("<hr>", unsafe_allow_html=True)
+if analyze_btn:
+    # Use input values or fall back to sidebar selection
+    company_clean = company.strip() if company.strip() else st.session_state.selected_company.strip()
+    ticker_clean = ticker.strip() if ticker.strip() else st.session_state.selected_ticker.strip()
     
-    # Check API key status and warn user
-    if not API_KEY:
-        st.info("""
-        ℹ️ **Using Sample/Demo Data** (API Key Not Configured)
+    if not company_clean:
+        st.error("⚠️ Please enter a company name or select from sidebar → Stock Discovery")
+    else:
+        # Clear session state after extracting values
+        st.session_state.selected_company = ""
+        st.session_state.selected_ticker = ""
         
-        Real-time sentiment analysis requires a NewsAPI key. You're seeing sample/demo articles for demonstration.
+        st.markdown("<hr>", unsafe_allow_html=True)
         
-        **To enable live sentiment analysis:**
-        1. Get free API key: https://newsapi.org
-        2. Edit `.streamlit/secrets.toml`
-        3. Add your key: `NEWS_API_KEY = "your_key_here"`
-        4. Refresh this page
-        """)
-    
-    # ===== MAIN ANALYSIS =====
-    st.markdown(f'<div class="section-header">📊 {company.upper()} - Sentiment Analysis</div>', unsafe_allow_html=True)
-    
-    with st.spinner(f"⏳ Analyzing {company}... (30-60 seconds)"):
-        results = analyze_news_sentiment(company.strip())
-    
-    if results:
-        # Overall Sentiment
-        overall_score = overall_sentiment(results)
-        positive_count = sum(1 for r in results if r["sentiment"] == "Positive")
-        negative_count = sum(1 for r in results if r["sentiment"] == "Negative")
-        neutral_count = sum(1 for r in results if r["sentiment"] == "Neutral")
-        total = len(results)
+        # Check API key status and warn user
+        if not API_KEY:
+            st.info("""
+            ℹ️ **Using Sample/Demo Data** (API Key Not Configured)
+            
+            Real-time sentiment analysis requires a NewsAPI key. You're seeing sample/demo articles for demonstration.
+            
+            **To enable live sentiment analysis:**
+            1. Get free API key: https://newsapi.org
+            2. Edit `.streamlit/secrets.toml`
+            3. Add your key: `NEWS_API_KEY = "your_key_here"`
+            4. Refresh this page
+            """)
         
-        # Sentiment Gauge
-        col_gauge = st.columns(1)[0]
-        gauge_fig, gauge_ax = plt.subplots(figsize=(12, 2))
-        gauge_ax.barh([0], [overall_score], color=['#FF6B6B' if overall_score < -0.3 else '#FFA94D' if overall_score < 0.3 else '#51CF66'], height=0.3)
+        # ===== MAIN ANALYSIS =====
+        st.markdown(f'<div class="section-header">📊 {company_clean.upper()} - Sentiment Analysis</div>', unsafe_allow_html=True)
+        
+        with st.spinner(f"⏳ Analyzing {company_clean}... (30-60 seconds)"):
+            results = analyze_news_sentiment(company_clean)
+        
+        if results:
+            # Overall Sentiment
+            overall_score = overall_sentiment(results)
+            positive_count = sum(1 for r in results if r["sentiment"] == "Positive")
+            negative_count = sum(1 for r in results if r["sentiment"] == "Negative")
+            neutral_count = sum(1 for r in results if r["sentiment"] == "Neutral")
+            total = len(results)
+            
+            # Sentiment Gauge
+            col_gauge = st.columns(1)[0]
+            gauge_fig, gauge_ax = plt.subplots(figsize=(12, 2))
+            gauge_ax.barh([0], [overall_score], color=['#FF6B6B' if overall_score < -0.3 else '#FFA94D' if overall_score < 0.3 else '#51CF66'], height=0.3)
         gauge_ax.set_xlim([-1, 1])
         gauge_ax.set_ylim([-0.5, 0.5])
         gauge_ax.axvline(0, color='black', linestyle='-', linewidth=2)
