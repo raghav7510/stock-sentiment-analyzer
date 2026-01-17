@@ -55,195 +55,248 @@ st.markdown("""
     }
     
     body {
-        background: #f8f9fa;
+        background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
     }
     
     .main-title {
         text-align: center;
-        font-size: 3.2em;
-        font-weight: 800;
-        margin: 40px 0 15px 0;
-        color: #1a1a1a;
-        letter-spacing: -0.5px;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        font-size: 3.8em;
+        font-weight: 900;
+        margin: 50px 0 10px 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -1px;
+        filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3));
+        animation: titleGlow 3s ease-in-out infinite;
+    }
+    
+    @keyframes titleGlow {
+        0%, 100% { filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3)); }
+        50% { filter: drop-shadow(0 8px 16px rgba(102, 126, 234, 0.5)); }
     }
     
     .subtitle {
         text-align: center;
-        font-size: 1.15em;
-        color: #555555;
-        margin-bottom: 10px;
+        font-size: 1.25em;
+        color: #a0aec0;
+        margin-bottom: 15px;
         font-weight: 500;
+        letter-spacing: 0.3px;
     }
     
     .input-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 30px;
-        border-radius: 15px;
-        margin: 20px 0;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        padding: 40px;
+        border-radius: 20px;
+        margin: 30px 0;
         color: white;
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        transition: all 0.4s ease;
+    }
+    
+    .input-section:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 25px 50px rgba(102, 126, 234, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     }
     
     .input-label {
-        font-size: 0.95em;
-        font-weight: 600;
-        margin-bottom: 8px;
+        font-size: 1em;
+        font-weight: 700;
+        margin-bottom: 12px;
         color: rgba(255, 255, 255, 0.95);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9em;
     }
     
     .section-header {
-        font-size: 1.6em;
-        font-weight: 700;
-        color: #667eea;
+        font-size: 1.75em;
+        font-weight: 800;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         border-bottom: 3px solid #667eea;
-        padding-bottom: 12px;
-        margin: 30px 0 20px 0;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        padding-bottom: 15px;
+        margin: 40px 0 25px 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     
     .info-box {
-        background: #e8f4f8;
-        padding: 15px;
-        border-left: 4px solid #667eea;
-        border-radius: 6px;
-        margin: 15px 0;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        padding: 20px;
+        border-left: 5px solid #667eea;
+        border-radius: 12px;
+        margin: 20px 0;
         font-size: 0.95em;
-        color: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
     }
     
     .metric-box {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+        padding: 20px;
+        border-radius: 12px;
         text-align: center;
+        border: 1px solid rgba(102, 126, 234, 0.2);
         border-top: 3px solid #667eea;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .metric-box:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
     }
     
     .news-item {
-        background: #ffffff;
-        padding: 16px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        padding: 20px;
         border-left: 5px solid #667eea;
-        margin: 12px 0;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 15px 0;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         transition: all 0.3s ease;
-        border: 1px solid #e0e0e0;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        backdrop-filter: blur(5px);
     }
     
     .news-item b {
-        color: #1a1a1a;
+        color: #e0e0e0;
         font-size: 0.98em;
-        line-height: 1.5;
+        line-height: 1.6;
         display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
+        margin-bottom: 10px;
+        font-weight: 700;
     }
     
     .news-item p {
-        color: #333333;
+        color: #b0b0b0;
         font-size: 0.9em;
         margin: 0;
-        line-height: 1.4;
+        line-height: 1.5;
     }
     
     .news-meta {
-        color: #666666;
+        color: #808080;
         font-size: 0.85em;
-        margin-top: 8px;
+        margin-top: 10px;
     }
     
     .news-item:hover {
-        box-shadow: 0 4px 12px rgba(102,126,234,0.25);
-        transform: translateX(4px);
-        background: #fafbff;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        transform: translateX(6px);
+        border-color: rgba(102, 126, 234, 0.5);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%);
     }
     
     .sentiment-bullish {
         display: inline-block;
-        background: #51CF66;
+        background: linear-gradient(135deg, #51CF66 0%, #40C057 100%);
         color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-weight: 700;
         font-size: 0.9em;
+        box-shadow: 0 4px 12px rgba(81, 207, 102, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .sentiment-bearish {
         display: inline-block;
-        background: #FF6B6B;
+        background: linear-gradient(135deg, #FF6B6B 0%, #FA5252 100%);
         color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-weight: 700;
         font-size: 0.9em;
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .sentiment-neutral {
         display: inline-block;
-        background: #FFA94D;
+        background: linear-gradient(135deg, #FFA94D 0%, #FF9800 100%);
         color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-weight: 700;
         font-size: 0.9em;
+        box-shadow: 0 4px 12px rgba(255, 169, 77, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .metric-label {
-        font-size: 0.85em;
-        color: #666666;
-        font-weight: 500;
+        font-size: 0.8em;
+        color: #a0aec0;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .metric-value {
+        font-size: 2em;
+        font-weight: 900;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 10px 0;
+    }
+    
+    .show-more-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        margin: 15px 0;
+        font-size: 0.9em;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     
-    .metric-value {
-        font-size: 1.8em;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 8px 0;
-    }
-    
-    .show-more-btn {
-        background: #667eea;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
-        margin: 15px 0;
-        font-size: 0.9em;
-    }
-    
     .show-more-btn:hover {
-        background: #764ba2;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        transform: translateY(-2px);
     }
     
     hr {
         border: 0;
         height: 1px;
-        background: #e0e0e0;
-        margin: 25px 0;
+        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+        margin: 30px 0;
     }
     
     .disclaimer {
         text-align: center;
         font-size: 0.85em;
-        color: #666666;
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid #e0e0e0;
+        color: #808080;
+        margin-top: 40px;
+        padding: 25px 20px;
+        border-top: 1px solid rgba(102, 126, 234, 0.2);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        border-radius: 12px;
+        line-height: 1.6;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ============ PAGE TITLE ============
-st.markdown('<div class="main-title">📈 Stock Sentiment Analyzer</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">📡 Real-time analysis with 500+ live articles from internet</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">📈 STOCK SENTIMENT ANALYZER</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">🚀 Enterprise-Grade Real-Time Analysis | 500+ Live Articles | AI-Powered Insights</div>', unsafe_allow_html=True)
 
-# Visual separator
-st.markdown("<div style='height: 2px; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); margin: 20px 0; border-radius: 2px;'></div>", unsafe_allow_html=True)
+# Premium visual separator
+st.markdown("<div style='height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%); margin: 30px 0; border-radius: 3px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'></div>", unsafe_allow_html=True)
 
 # Live status indicator with refresh button
 col_status_1, col_status_2 = st.columns([3, 1])
