@@ -501,7 +501,6 @@ def get_demo_news(company):
             
             articles.append({
                 "title": templates[template_idx],
-                "sentiment": sentiments[sentiment_idx],
                 "source": {"name": sources[source_idx]},
                 "publishedAt": f"2026-01-{18 - (i // 24)%18}T{10 + (i % 12):02d}:{(i*7)%60:02d}:00Z",
                 "url": f"https://example.com/article/{i}"
@@ -555,7 +554,7 @@ def analyze(text):
         return None, None, None
 
 def analyze_news_sentiment(company):
-    """Batch analyze news articles"""
+    """Batch analyze news articles - Always use FinBERT for analysis"""
     news_articles = get_stock_news(company)
     
     if not news_articles:
@@ -565,27 +564,34 @@ def analyze_news_sentiment(company):
     results = []
     progress_bar = st.progress(0)
     status_text = st.empty()
+    error_count = 0
     
     for i, article in enumerate(news_articles):
         headline = article.get("title", "")
         
-        # Check if article already has sentiment (from demo data)
-        if "sentiment" in article:
-            sentiment = article["sentiment"]
-            score = {"Positive": 0.7, "Negative": -0.7, "Neutral": 0}.get(sentiment, 0)
-            confidence = 0.85
-        else:
-            sentiment, score, confidence = analyze(headline)
+        if not headline or len(headline) < 3:
+            continue
         
-        if sentiment:
+        # ALWAYS use FinBERT for sentiment analysis (don't use pre-assigned from demo)
+        sentiment, score, confidence = analyze(headline)
+        
+        if sentiment and sentiment in ["Positive", "Negative", "Neutral"]:
+            # Ensure confidence is a number 0-100
+            if isinstance(confidence, float):
+                conf_value = confidence * 100
+            else:
+                conf_value = float(confidence) if confidence else 75.0
+            
             results.append({
                 "headline": headline,
                 "sentiment": sentiment,
-                "score": score,
-                "confidence": confidence * 100 if isinstance(confidence, float) else confidence,
+                "score": score if isinstance(score, (int, float)) else 0,
+                "confidence": min(100, max(0, conf_value)),  # Ensure 0-100
                 "source": article.get("source", {}).get("name", "Unknown"),
                 "published": article.get("publishedAt", "")
             })
+        else:
+            error_count += 1
         
         progress = (i + 1) / len(news_articles)
         progress_bar.progress(progress)
@@ -595,7 +601,7 @@ def analyze_news_sentiment(company):
     status_text.empty()
     
     if not results:
-        st.warning("⚠️ Could not analyze sentiment. Check API key and try again.")
+        st.error(f"❌ Could not analyze any articles ({error_count} errors). Model may be loading. Try again.")
     
     return results
 
@@ -632,19 +638,32 @@ def get_stock_price(ticker):
     try:
         original_ticker = ticker
         
-        # CRITICAL FIX: If ticker doesn't have .NS or .BO, auto-add .NS for Indian stocks
-        # This is because yfinance defaults to US ADR versions (wrong prices!)
+        # List of known Indian stock tickers (NSE)
+        indian_tickers = [
+            'INFY', 'TCS', 'RELIANCE', 'HDFCBANK', 'ITC', 'MARUTI',
+            'AXISBANK', 'ICICIBANK', 'BHARTIARTL', 'COALINDIA', 'WIPRO',
+            'SUNPHARMA', 'HINDUNILVR', 'LT', 'TATAMOTORS', 'HDFC',
+            'BAJAAJFINSV', 'BAJAJFINSV', 'CIPLA', 'DRREDDY', 'NTPC',
+            'POWERGRID', 'JSWSTEEL', 'SBIN', 'ONGC', 'ADANIPOWER'
+        ]
+        
+        # Auto-add .NS for Indian stocks if not already present
         if ticker and not ticker.endswith('.NS') and not ticker.endswith('.BO'):
-            ticker_with_ns = ticker + '.NS'
-            try:
-                test_stock = yf.Ticker(ticker_with_ns)
-                test_hist = test_stock.history(period="1d")
-                if not test_hist.empty:
-                    # Has data with .NS, so it's an Indian stock
-                    ticker = ticker_with_ns
-            except:
-                # Keep original ticker if .NS fails
-                pass
+            if ticker.upper() in indian_tickers:
+                # Definitely an Indian stock
+                ticker = ticker + '.NS'
+            else:
+                # Try .NS for unknown tickers as fallback
+                ticker_with_ns = ticker + '.NS'
+                try:
+                    test_stock = yf.Ticker(ticker_with_ns)
+                    test_hist = test_stock.history(period="1d")
+                    if not test_hist.empty:
+                        # Has data with .NS, so it's an Indian stock
+                        ticker = ticker_with_ns
+                except:
+                    # Keep original ticker if .NS fails
+                    pass
         
         # Fetch stock data
         stock = yf.Ticker(ticker)
