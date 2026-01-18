@@ -148,29 +148,21 @@ st.markdown("""
     .section-header {
         font-size: 1.85em;
         font-weight: 900;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
         border-bottom: 4px solid #667eea;
         padding-bottom: 18px;
         margin: 50px 0 30px 0;
         letter-spacing: 0.5px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     
-    /* UPDATE: New .emoji class prevents gradient effects from affecting emojis */
-    /* UPDATE: Resets all gradient properties to display emojis clearly and colorfully */
-    /* UPDATE: All emojis now display with natural colors, not purple-tinted */
-    .emoji {
-        background: none !important;
-        -webkit-background-clip: unset !important;
-        -webkit-text-fill-color: unset !important;
-        background-clip: unset !important;
-        color: inherit !important;
-        font-size: 1.2em;
-        margin-right: 8px;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        display: inline-block;
+    /* UPDATE: Emoji styling - ensure emojis display with natural colors */
+    .section-header::first-letter {
+        -webkit-text-fill-color: white;
+        color: white;
+        background-clip: unset;
     }
     
     .info-box {
@@ -296,11 +288,10 @@ st.markdown("""
 
 # ============ PAGE TITLE ============
 # UPDATE: Separated emoji from gradient text to prevent purple tinting
-# UPDATE: Added drop-shadow filter to emoji for better visibility
-# UPDATE: Emoji now displays in bright color without gradient effects
-st.markdown('<div class="main-title"><span style="font-size: 1.3em; margin-right: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">📈</span><span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">STOCK SENTIMENT ANALYZER</span></div>', unsafe_allow_html=True)
-# UPDATE: Styled subtitle emoji with gold color for better contrast
-st.markdown('<div class="subtitle"><span style="color: #FFD700; font-size: 1.1em;">🚀</span> Enterprise-Grade Real-Time Analysis | 500+ Live Articles | AI-Powered Insights</div>', unsafe_allow_html=True)
+# UPDATE: Emoji displays in natural bright color
+st.markdown('<div class="main-title">📈 <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">STOCK SENTIMENT ANALYZER</span></div>', unsafe_allow_html=True)
+# UPDATE: Styled subtitle emoji for better visibility
+st.markdown('<div class="subtitle">🚀 Enterprise-Grade Real-Time Analysis | 500+ Live Articles | AI-Powered Insights</div>', unsafe_allow_html=True)
 st.markdown("<div style='height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%); margin: 30px 0; border-radius: 3px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'></div>", unsafe_allow_html=True)
 
 # Live status indicator
@@ -1135,7 +1126,7 @@ if analyze_btn:
         st.session_state.selected_ticker = ""
         
         st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown(f'<div class="section-header"><span class="emoji">📊</span>{company_clean.upper()} - Sentiment Analysis</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-header">📊 {company_clean.upper()} - Sentiment Analysis</div>', unsafe_allow_html=True)
         
         if not API_KEY:
             st.info("""
@@ -1183,7 +1174,7 @@ if analyze_btn:
                 col5.metric("➡️ Signal", "NEUTRAL")
             
             # News tabs
-            st.markdown('<div class="section-header"><span class="emoji">📋</span>News by Sentiment</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">📋 News by Sentiment</div>', unsafe_allow_html=True)
             
             tab1, tab2, tab3 = st.tabs([
                 f"🟢 Positive ({positive_count})",
@@ -1261,7 +1252,7 @@ if analyze_btn:
                     st.info("No negative news found")
             
             # Keywords
-            st.markdown('<div class="section-header"><span class="emoji">🔑</span>Top Keywords</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">🔑 Top Keywords</div>', unsafe_allow_html=True)
             
             keywords = extract_keywords([r["headline"] for r in results], top_n=12)
             if keywords:
@@ -1292,7 +1283,7 @@ if analyze_btn:
                 # Auto-refresh every 30 seconds
                 col_refresh_1, col_refresh_2, col_refresh_3 = st.columns([2, 1, 1])
                 with col_refresh_1:
-                    st.markdown(f'<div class="section-header"><span class="emoji">💵</span>Live Stock Price: {ticker_clean} <span class="emoji">🔴</span>LIVE</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="section-header">💵 Live Stock Price: {ticker_clean} 🔴 LIVE</div>', unsafe_allow_html=True)
                 with col_refresh_2:
                     st.caption("⏱️ Updates every 5 min")
                 with col_refresh_3:
@@ -1338,7 +1329,7 @@ if analyze_btn:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    st.markdown('<div class="section-header"><span class="emoji">📈</span>Stock Price Chart</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-header">📈 Stock Price Chart</div>', unsafe_allow_html=True)
                     period = st.selectbox("Select Time Period", ["1mo", "3mo", "6mo", "1y"], key="period_select")
                     try:
                         ticker_for_chart = stock_data.get('ticker_used', ticker_clean)
@@ -1351,7 +1342,7 @@ if analyze_btn:
                         st.warning(f"⚠️ Unable to render chart: {str(e)[:60]}")
                     
                     # ===== SENTIMENT & PRICE CORRELATION =====
-                    st.markdown('<div class="section-header"><span class="emoji">🔗</span>How Sentiment Affects Price</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-header">🔗 How Sentiment Affects Price</div>', unsafe_allow_html=True)
                     
                     try:
                         sentiment_price_analysis = analyze_sentiment_price_impact(ticker_for_chart, results)
@@ -1391,7 +1382,7 @@ if analyze_btn:
                             """, unsafe_allow_html=True)
                         
                         # Detailed chart
-                        st.markdown('<div class="section-header"><span class="emoji">📊</span>Detailed Sentiment-Price Analysis</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="section-header">📊 Detailed Sentiment-Price Analysis</div>', unsafe_allow_html=True)
                         detail_chart = plot_sentiment_price_correlation(ticker_for_chart, sentiment_price_analysis)
                         if detail_chart:
                             st.pyplot(detail_chart, use_container_width=True)
@@ -1399,7 +1390,7 @@ if analyze_btn:
     # ===== COMPARISON SECTION =====
     if company2.strip():
         st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown(f'<div class="section-header"><span class="emoji">🔄</span>Compare: {company.upper()} vs {company2.upper()}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-header">🔄 Compare: {company.upper()} vs {company2.upper()}</div>', unsafe_allow_html=True)
         
         with st.spinner(f"⏳ Analyzing {company2}... (30-60 seconds)"):
             results2 = analyze_all_articles(company2.strip())
