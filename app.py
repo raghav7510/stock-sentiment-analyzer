@@ -21,7 +21,7 @@ except ImportError:
     HAS_WORDCLOUD = False
 
 st.set_page_config(
-    page_title="Stock Sentiment Analyzer Pro",
+    page_title="Stock Sentiment Analyzer",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -91,6 +91,10 @@ st.markdown("""
         letter-spacing: -1px;
         filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3));
         animation: titleGlow 3s ease-in-out infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
     }
     
     @keyframes titleGlow {
@@ -250,7 +254,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============ PAGE TITLE ============
-st.markdown('<div class="main-title">📈 STOCK SENTIMENT ANALYZER PRO</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title"><span>📈</span> <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">STOCK SENTIMENT ANALYZER</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">🚀 Enterprise-Grade Real-Time Analysis | 500+ Live Articles | AI-Powered Insights</div>', unsafe_allow_html=True)
 st.markdown("<div style='height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%); margin: 30px 0; border-radius: 3px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'></div>", unsafe_allow_html=True)
 
