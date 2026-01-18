@@ -73,9 +73,15 @@ st.markdown("""
 <style>
     * {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        box-sizing: border-box;
     }
     
     body {
+        background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+        min-height: 100vh;
+    }
+    
+    .stApp {
         background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
     }
     
@@ -112,32 +118,33 @@ st.markdown("""
     }
     
     .input-section {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-        border: 2px solid rgba(102, 126, 234, 0.3);
-        padding: 40px;
-        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.18) 0%, rgba(118, 75, 162, 0.18) 100%);
+        border: 2.5px solid rgba(102, 126, 234, 0.35);
+        padding: 45px;
+        border-radius: 22px;
         margin: 30px 0;
         color: white;
-        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 50px rgba(102, 126, 234, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
         backdrop-filter: blur(10px);
         transition: all 0.4s ease;
     }
     
     .input-section:hover {
-        border-color: rgba(102, 126, 234, 0.5);
-        box-shadow: 0 25px 50px rgba(102, 126, 234, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        border-color: rgba(102, 126, 234, 0.55);
+        box-shadow: 0 28px 60px rgba(102, 126, 234, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18);
     }
     
     .section-header {
-        font-size: 1.75em;
-        font-weight: 800;
+        font-size: 1.85em;
+        font-weight: 900;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        border-bottom: 3px solid #667eea;
-        padding-bottom: 15px;
-        margin: 40px 0 25px 0;
+        border-bottom: 4px solid #667eea;
+        padding-bottom: 18px;
+        margin: 50px 0 30px 0;
+        letter-spacing: 0.5px;
     }
     
     .info-box {
@@ -153,19 +160,20 @@ st.markdown("""
     }
     
     .metric-box {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-        padding: 20px;
-        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+        padding: 25px;
+        border-radius: 15px;
         text-align: center;
-        border: 1px solid rgba(102, 126, 234, 0.2);
-        border-top: 3px solid #667eea;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s ease;
+        border: 2px solid rgba(102, 126, 234, 0.25);
+        border-top: 4px solid #667eea;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        transition: all 0.4s ease;
     }
     
     .metric-box:hover {
-        border-color: rgba(102, 126, 234, 0.5);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.6);
+        box-shadow: 0 12px 25px rgba(102, 126, 234, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        transform: translateY(-3px);
     }
     
     .news-item {
@@ -181,12 +189,19 @@ st.markdown("""
     }
     
     .news-item b {
-        color: #e0e0e0;
-        font-size: 0.98em;
-        line-height: 1.6;
+        color: #f0f0f0;
+        font-size: 0.99em;
+        line-height: 1.65;
         display: block;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         font-weight: 700;
+    }
+    
+    .news-meta {
+        font-size: 0.85em;
+        color: #a8a8a8;
+        margin-top: 8px;
+        font-weight: 500;
     }
     
     .news-item:hover {
@@ -254,7 +269,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============ PAGE TITLE ============
-st.markdown('<div class="main-title"><span>📈</span> <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">STOCK SENTIMENT ANALYZER</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title"><span style="font-size: 1.2em; margin-right: 15px;">📈</span> <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">STOCK SENTIMENT ANALYZER</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">🚀 Enterprise-Grade Real-Time Analysis | 500+ Live Articles | AI-Powered Insights</div>', unsafe_allow_html=True)
 st.markdown("<div style='height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%); margin: 30px 0; border-radius: 3px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'></div>", unsafe_allow_html=True)
 
@@ -620,7 +635,7 @@ def plot_stock_chart(ticker, period="1mo"):
         currency_symbol = "₹" if is_indian else "$"
         currency_label = "INR" if is_indian else currency
         
-        fig = plt.figure(figsize=(14, 7), facecolor='white')
+        fig = plt.figure(figsize=(14, 7), facecolor='white', dpi=120)
         gs = fig.add_gridspec(3, 1, height_ratios=[3, 1, 0.05], hspace=0.3)
         
         ax1 = fig.add_subplot(gs[0])
@@ -758,7 +773,7 @@ def plot_sentiment_price_correlation(ticker, analysis_data):
         if not daily_sentiment:
             return None
         
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), facecolor='white', sharex=False)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), facecolor='white', sharex=False, dpi=120)
         
         # Professional price chart
         ax1.plot(hist.index, hist['Close'], linewidth=2.5, color='#1E90FF', label='Close Price', zorder=3)
@@ -825,7 +840,7 @@ def plot_combined_sentiment_price(ticker, analysis_data):
         
         close_prices = hist['Close'].values
         
-        fig, ax1 = plt.subplots(figsize=(13, 6), facecolor='white')
+        fig, ax1 = plt.subplots(figsize=(13, 6), facecolor='white', dpi=120)
         
         # Price line
         color_price = '#1E90FF'
@@ -907,17 +922,17 @@ def calculate_sentiment_price_correlation(analysis_data):
 def get_correlation_interpretation(corr):
     """Interpret correlation coefficient"""
     if np.isnan(corr):
-        return "Insufficient data"
+        return '<div style="background: #e8f5e9; padding: 12px; border-radius: 8px; border-left: 4px solid #4caf50; color: #1b5e20;"><b>ℹ️ Insufficient data</b></div>'
     elif corr > 0.6:
-        return "🚀 Strong positive - Positive sentiment drives prices UP"
+        return '<div style="background: #c8e6c9; padding: 12px; border-radius: 8px; border-left: 4px solid #2e7d32; color: #1b5e20;"><b>🚀 Strong positive</b> - Positive sentiment drives prices UP</div>'
     elif corr > 0.3:
-        return "📈 Moderate positive - Sentiment tends to support price gains"
+        return '<div style="background: #a5d6a7; padding: 12px; border-radius: 8px; border-left: 4px solid #388e3c; color: #1b5e20;"><b>📈 Moderate positive</b> - Sentiment tends to support price gains</div>'
     elif corr > -0.3:
-        return "⚖️ Weak correlation - Mixed relationship"
+        return '<div style="background: #fff9c4; padding: 12px; border-radius: 8px; border-left: 4px solid #f57f17; color: #333333;"><b>⚖️ Weak correlation</b> - Mixed relationship</div>'
     elif corr > -0.6:
-        return "📉 Moderate negative - Sentiment has inverse effect"
+        return '<div style="background: #ffccbc; padding: 12px; border-radius: 8px; border-left: 4px solid #e65100; color: #3e2723;"><b>📉 Moderate negative</b> - Sentiment has inverse effect</div>'
     else:
-        return "🔴 Strong negative - Negative sentiment drives prices DOWN"
+        return '<div style="background: #ffcdd2; padding: 12px; border-radius: 8px; border-left: 4px solid #c62828; color: #b71c1c;"><b>🔴 Strong negative</b> - Negative sentiment drives prices DOWN</div>'
 
 # ============ SIDEBAR DISCOVERY ============
 with st.sidebar:
@@ -942,35 +957,55 @@ with st.sidebar:
                             st.rerun()
     
     elif choice == "Search":
-        st.markdown("#### 🔍 Find Stock")
+        st.markdown("#### 🔍 Advanced Search")
         
         search_query = st.text_input(
-            "Search by name or ticker:",
-            placeholder="Apple, TSLA, Infosys...",
+            "Search by company name or ticker:",
+            placeholder="e.g., Tesla, TSLA, Infosys, INFY...",
+            label_visibility="collapsed"
+        )
+        
+        # Filter by region
+        search_region = st.multiselect(
+            "Filter by region:",
+            ["🇮🇳 India (NSE)", "🇺🇸 USA (NASDAQ/NYSE)", "🌍 International"],
+            default=["🇮🇳 India (NSE)", "🇺🇸 USA (NASDAQ/NYSE)", "🌍 International"],
             label_visibility="collapsed"
         )
         
         if search_query and len(search_query) >= 1:
             all_stocks = []
-            for stocks in STOCK_CATEGORIES.values():
-                all_stocks.extend(stocks)
+            for category, stocks in STOCK_CATEGORIES.items():
+                if category in search_region:
+                    all_stocks.extend(stocks)
             
             query_lower = search_query.lower()
             results = [s for s in all_stocks if query_lower in s[0].lower() or query_lower in s[1].lower()]
             
             if results:
-                st.markdown(f"**Found {len(results)}:**")
-                for company_name, ticker in results[:15]:
-                    col1, col2 = st.columns([3, 1])
+                st.markdown(f"✅ **Found {len(results)} match{'es' if len(results) != 1 else ''}:**")
+                st.divider()
+                
+                for i, (company_name, ticker) in enumerate(results[:20], 1):
+                    col1, col2, col3 = st.columns([2, 0.8, 0.5])
                     with col1:
-                        st.markdown(f"**{company_name}** `{ticker}`")
+                        st.markdown(f"**{i}. {company_name}**")
+                        st.caption(f"Ticker: `{ticker}`")
                     with col2:
-                        if st.button("→", key=f"search_{ticker}", help="Select"):
+                        st.write("")
+                    with col3:
+                        if st.button("Select", key=f"search_{ticker}", help="Select this stock", use_container_width=True):
                             st.session_state.selected_company = company_name.split()[0]
                             st.session_state.selected_ticker = ticker
                             st.rerun()
+                
+                if len(results) > 20:
+                    st.caption(f"📌 Showing 20 of {len(results)} results. Refine your search!")
             else:
-                st.info("No matches. Try different keywords!")
+                st.warning("❌ No matches found. Try:")
+                st.markdown("• Different spelling or abbreviation")
+                st.markdown("• Full company name instead of partial")
+                st.markdown("• Stock ticker symbol (e.g., AAPL, TCS)")
     
     else:  # Help
         st.markdown("#### ℹ️ Help & Guide")
@@ -1087,8 +1122,8 @@ if analyze_btn:
             total = len(results)
             
             # Sentiment Gauge
-            gauge_fig, gauge_ax = plt.subplots(figsize=(12, 2))
-            gauge_ax.barh([0], [overall_score], color=['#FF6B6B' if overall_score < -0.3 else '#FFA94D' if overall_score < 0.3 else '#51CF66'], height=0.3)
+            gauge_fig, gauge_ax = plt.subplots(figsize=(12, 2), dpi=120)
+            gauge_ax.barh([0], [overall_score], color=['#FF6B6B' if overall_score < -0.3 else '#FFA94D' if overall_score < 0.3 else '#51CF66'], height=0.3, edgecolor='#333', linewidth=2)
             gauge_ax.set_xlim([-1, 1])
             gauge_ax.set_ylim([-0.5, 0.5])
             gauge_ax.axvline(0, color='black', linestyle='-', linewidth=2)
@@ -1199,12 +1234,18 @@ if analyze_btn:
             if keywords:
                 col_kw1, col_kw2 = st.columns([2, 1])
                 with col_kw1:
-                    fig, ax = plt.subplots(figsize=(10, 4))
+                    fig, ax = plt.subplots(figsize=(10, 4), dpi=120)
                     kw_df = pd.DataFrame(list(keywords.items()), columns=["Keyword", "Count"]).sort_values("Count")
-                    ax.barh(kw_df["Keyword"], kw_df["Count"], color='#667eea')
-                    ax.set_xlabel("Frequency")
+                    bars = ax.barh(kw_df["Keyword"], kw_df["Count"], color='#667eea', edgecolor='#2c3e50', linewidth=1.5)
+                    ax.set_xlabel("Frequency", fontsize=11, fontweight='bold')
+                    ax.set_title("Most Mentioned Keywords", fontsize=12, fontweight='bold', pad=15)
+                    ax.grid(axis='x', alpha=0.3, linestyle='--')
+                    for i, bar in enumerate(bars):
+                        width = bar.get_width()
+                        ax.text(width, bar.get_y() + bar.get_height()/2, f' {int(width)}', 
+                               ha='left', va='center', fontweight='bold', fontsize=9)
                     fig.tight_layout()
-                    st.pyplot(fig)
+                    st.pyplot(fig, use_container_width=True)
                     plt.close()
                 with col_kw2:
                     st.markdown("**Top Keywords:**")
@@ -1311,8 +1352,7 @@ if analyze_btn:
                             # Interpretation
                             interpretation = corr_analysis['interpretation']
                             st.markdown(f"""
-                            <div style="background: #f0f2f6; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                            <b>📌 Interpretation:</b><br>
+                            <div style="margin-top: 15px;">
                             {interpretation}
                             </div>
                             """, unsafe_allow_html=True)
@@ -1370,27 +1410,51 @@ if analyze_btn:
                 st.metric("Articles", len(results2))
             
             # Comparison chart
-            fig, ax = plt.subplots(figsize=(10, 4))
+            fig, ax = plt.subplots(figsize=(10, 5), dpi=120)
             companies_list = [company, company2]
             scores = [overall_score, overall_score2]
             colors = ['#51CF66' if s > 0.3 else '#FF6B6B' if s < -0.3 else '#FFA94D' for s in scores]
-            ax.bar(companies_list, scores, color=colors, alpha=0.7, width=0.5)
-            ax.axhline(0, color='black', linestyle='--', linewidth=1)
-            ax.set_ylabel("Sentiment Score")
+            bars = ax.bar(companies_list, scores, color=colors, alpha=0.85, width=0.5, edgecolor='#2c3e50', linewidth=2.5)
+            ax.axhline(0, color='#333', linestyle='-', linewidth=2)
+            ax.set_ylabel("Sentiment Score", fontsize=12, fontweight='bold')
             ax.set_ylim([-1, 1])
-            ax.set_title("Sentiment Score Comparison")
+            ax.set_title("📊 Sentiment Score Comparison", fontsize=13, fontweight='bold', pad=15)
+            ax.grid(axis='y', alpha=0.3, linestyle='--')
+            ax.set_facecolor('#f8f9fa')
+            for bar in bars:
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{height:.2f}', ha='center', va='bottom' if height >= 0 else 'top', 
+                       fontweight='bold', fontsize=11)
             fig.tight_layout()
-            st.pyplot(fig)
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown(f"""
 <div class="disclaimer">
-⚠️ For educational purposes. Not financial advice.<br>
-✅ <b>LIVE Mode Active</b> - Stock prices update every 30 seconds from real market data<br>
-📊 <b>Real-Time Prices</b>: Auto-detects Indian stocks and fetches INR prices<br>
-📰 Maximum articles: 500+ from live feeds or demo data<br>
-📈 Charts: Professional candlestick + volume | Auto-refresh every 30 seconds<br>
-🔄 Data Source: yfinance (Yahoo Finance) - Real market data
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+    <div>
+        <b>📋 Disclaimer</b><br>
+        ⚠️ Educational purposes only. Not financial advice.<br>
+        📊 For research and learning purposes<br>
+        💼 Always consult a financial advisor
+    </div>
+    <div>
+        <b>✨ Features</b><br>
+        ✅ LIVE Mode - Real market data<br>
+        📰 500+ Articles analyzed<br>
+        📈 Professional charts & analysis<br>
+        🤖 AI-Powered sentiment detection
+    </div>
+</div>
+<hr style="border: 1px solid rgba(102, 126, 234, 0.3); margin: 15px 0;">
+<div style="text-align: center; padding: 15px 0;">
+    <b>👨‍💻 Made by Raghav Dhanotiya</b><br>
+    📧 Email: <span style="color: #667eea; font-weight: bold;">raghav74dhanotiya@gmail.com</span><br>
+    📱 Contact: <span style="color: #667eea; font-weight: bold;">+91 9109657983</span><br>
+    <br>
+    <span style="font-size: 0.85em; color: #999;">© 2026 Stock Sentiment Analyzer | Built with ❤️ using Streamlit, AI & Finance APIs</span>
+</div>
 </div>
 """, unsafe_allow_html=True)
