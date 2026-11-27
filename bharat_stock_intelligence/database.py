@@ -37,9 +37,9 @@ def persist_universe(instruments: list[dict], constituents: list[dict]) -> dict:
         RETURNING id
     """)
     snapshot_sql = text("""
-        INSERT INTO universe_snapshots(index_name, snapshot_date, symbol, exchange, company_name, sector, source)
-        VALUES ('NIFTY 500', :snapshot_date, :symbol, 'NSE', :company_name, :sector, :source)
-        ON CONFLICT (index_name, snapshot_date, exchange, symbol) DO UPDATE SET
+        INSERT INTO universe_snapshots(index_name, captured_on, source_as_of_date, symbol, exchange, company_name, sector, source)
+        VALUES ('NIFTY 500', :captured_on, :source_as_of_date, :symbol, 'NSE', :company_name, :sector, :source)
+        ON CONFLICT (index_name, captured_on, exchange, symbol) DO UPDATE SET
             company_name = EXCLUDED.company_name, sector = EXCLUDED.sector, source = EXCLUDED.source
     """)
     sector_sql = text("""
@@ -56,13 +56,13 @@ def persist_universe(instruments: list[dict], constituents: list[dict]) -> dict:
                 "source": row.get("source", "NSE official equity master"),
             })
         for row in constituents:
-            snapshot_date = row.get("snapshot_date") or date.today()
+            captured_on = row.get("captured_on") or date.today()
             connection.execute(sector_sql, {
                 "symbol": row["symbol"], "sector": row.get("sector"),
                 "company_name": row.get("company_name"),
             })
             connection.execute(snapshot_sql, {
-                "snapshot_date": snapshot_date, "symbol": row["symbol"],
+                "captured_on": captured_on, "symbol": row["symbol"],
                 "company_name": row.get("company_name"), "sector": row.get("sector"),
                 "source": row.get("source", "NSE Indices NIFTY 500 constituent CSV"),
             })
@@ -157,7 +157,7 @@ def get_instruments(query: str | None = None, limit: int = 100) -> list[dict]:
                ARRAY(SELECT a.alias FROM instrument_aliases a WHERE a.instrument_id=i.id) AS aliases,
                EXISTS(SELECT 1 FROM universe_snapshots u
                       WHERE u.symbol=i.symbol AND u.exchange=i.exchange AND u.index_name='NIFTY 500'
-                        AND u.snapshot_date=(SELECT MAX(snapshot_date) FROM universe_snapshots WHERE index_name='NIFTY 500')) AS in_nifty500
+                        AND u.captured_on=(SELECT MAX(captured_on) FROM universe_snapshots WHERE index_name='NIFTY 500')) AS in_nifty500
         FROM instruments i
         WHERE (:query IS NULL OR i.symbol ILIKE :pattern OR i.company_name ILIKE :pattern)
         ORDER BY i.company_name LIMIT :limit
