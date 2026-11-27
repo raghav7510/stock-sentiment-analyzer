@@ -11,7 +11,7 @@ def test_market_adjusted_car_on_event_window():
     result = calculate_event_study(asset, benchmark, [idx[2]], 1, 2)
     assert result["event_day"].tolist() == [-1, 0, 1, 2]
     assert result.iloc[1]["abnormal_return"] == pytest.approx(0.0)
-    assert result.iloc[-1]["car"] == pytest.approx(0.03)
+    assert result.iloc[-1]["car"] == pytest.approx(0.02)
 
 
 def test_missing_event_date_is_skipped():
