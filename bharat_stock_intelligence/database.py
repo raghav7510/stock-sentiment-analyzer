@@ -240,14 +240,14 @@ def get_earnings_surprises(limit: int = 100) -> list[dict]:
 
 def persist_event_study(instrument_symbol: str, event_type: str, event_date: date,
                         benchmark_symbol: str, window_before: int, window_after: int,
-                        observations: list[dict], methodology: str) -> int:
+                        observations: list[dict], methodology: str, exchange: str = "NSE") -> int:
     import json
     statement = text("""
         INSERT INTO event_study_runs(instrument_id, event_type, event_date, benchmark_symbol,
             window_before, window_after, observations, methodology)
         SELECT id, :event_type, :event_date, :benchmark_symbol, :window_before,
             :window_after, CAST(:observations AS jsonb), :methodology
-        FROM instruments WHERE symbol=:symbol AND exchange='NSE'
+        FROM instruments WHERE symbol=:symbol AND exchange=:exchange
         RETURNING id
     """)
     with get_engine().begin() as connection:
@@ -255,7 +255,7 @@ def persist_event_study(instrument_symbol: str, event_type: str, event_date: dat
             "symbol": instrument_symbol, "event_type": event_type, "event_date": event_date,
             "benchmark_symbol": benchmark_symbol, "window_before": window_before,
             "window_after": window_after, "observations": json.dumps(observations, default=str),
-            "methodology": methodology,
+            "methodology": methodology, "exchange": exchange,
         }).scalar()
     if value is None:
         raise LookupError(f"Instrument {instrument_symbol} is not in the instrument master.")
