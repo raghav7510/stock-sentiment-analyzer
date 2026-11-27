@@ -103,11 +103,12 @@ def persist_article_results(articles: list[dict], model_name: str) -> int:
     """Upsert articles, sentiment, and deterministic instrument associations."""
     stored = 0
     insert_article = text("""
-        INSERT INTO news_articles (url, title, source, published_at, content_hash)
-        VALUES (:url, :title, :source, CAST(:published_at AS timestamptz), :content_hash)
+        INSERT INTO news_articles (url, canonical_url, title, source, published_at, content_hash)
+        VALUES (:url, :canonical_url, :title, :source, CAST(:published_at AS timestamptz), :content_hash)
         ON CONFLICT DO NOTHING
     """)
-    lookup_article = text("SELECT id FROM news_articles WHERE url=:url LIMIT 1")
+    lookup_article = text("SELECT id FROM news_articles WHERE canonical_url=:canonical_url OR url=:url
+        ORDER BY CASE WHEN canonical_url=:canonical_url THEN 0 ELSE 1 END LIMIT 1")
     sentiment_statement = text("""
         INSERT INTO article_sentiment (article_id, model_name, label, score, confidence)
         VALUES (:article_id, :model_name, :label, :score, :confidence)
@@ -124,12 +125,15 @@ def persist_article_results(articles: list[dict], model_name: str) -> int:
         for article in articles:
             identity = article.get("analysis_text") or article["title"]
             params = {
-                "url": article["url"], "title": article["title"], "source": article.get("source"),
+                "url": article["url"], "canonical_url": article.get("canonical_url", article["url"]),
+                "title": article["title"], "source": article.get("source"),
                 "published_at": _published_at(article.get("published_at")),
                 "content_hash": hashlib.sha256(identity.encode("utf-8")).hexdigest(),
             }
             connection.execute(insert_article, params)
-            article_id = connection.execute(lookup_article, {"url": article["url"]}).scalar()
+            article_id = connection.execute(lookup_article, {
+                "url": article["url"], "canonical_url": article.get("canonical_url", article["url"]),
+            }).scalar()
             if article_id is None:
                 continue
             connection.execute(sentiment_statement, {
