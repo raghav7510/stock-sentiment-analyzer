@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from bharat_stock_intelligence.config import get_settings
 from bharat_stock_intelligence.database import (
     ensure_instrument, get_announcements, get_daily_close_returns, get_earnings_surprises,
-    get_engine, get_instruments, get_sector_sentiment, persist_article_results,
+    get_engine, get_instruments, get_nifty500_members, get_sector_sentiment, persist_article_results,
     persist_daily_prices, persist_event_study,
 )
 from bharat_stock_intelligence.entity_matching import match_companies
@@ -24,7 +24,7 @@ logger = logging.getLogger("bsi.api")
 
 app = FastAPI(
     title="Bharat Stock Intelligence API",
-    version="0.2.0",
+    version="0.3.0",
     description="India-focused research analytics API; not investment advice.",
 )
 
@@ -191,6 +191,22 @@ def event_study(payload: EventStudyRequest):
 
 
 
+@app.get("/v1/universe/nifty500")
+def nifty500_universe():
+    try:
+        members = get_nifty500_members()
+        return {
+            "index": "NIFTY 500",
+            "count": len(members),
+            "capture_date": members[0]["captured_on"] if members else None,
+            "source_effective_date": members[0]["source_as_of_date"] if members else None,
+            "members": members,
+        }
+    except Exception as exc:
+        logger.exception("NIFTY 500 universe lookup failed")
+        raise HTTPException(status_code=503, detail="NIFTY 500 universe unavailable") from exc
+
+
 @app.get("/v1/instruments")
 def instruments(q: str | None = Query(default=None, max_length=120), limit: int = Query(100, ge=1, le=500)):
     try:
@@ -234,8 +250,12 @@ def sector_sentiment(days: int = Query(7, ge=1, le=90)):
 def event_study_from_stored_prices(payload: StoredEventStudyRequest):
     try:
         asset_rows = get_daily_close_returns(payload.instrument_symbol, payload.instrument_exchange)
+        if len(asset_rows) < 2:
+            raise LookupError("Insufficient stored daily prices for the requested instrument.")
         benchmark_exchange = "INDEX" if payload.benchmark_symbol.startswith("^") else "NSE"
         benchmark_rows = get_daily_close_returns(payload.benchmark_symbol.removesuffix(".NS"), benchmark_exchange)
+        if len(benchmark_rows) < 2:
+            raise LookupError("Insufficient stored daily prices for the requested benchmark.")
         asset = pd.Series(
             [row["return"] for row in asset_rows],
             index=pd.to_datetime([row["date"] for row in asset_rows]),
@@ -248,6 +268,8 @@ def event_study_from_stored_prices(payload: StoredEventStudyRequest):
             asset, benchmark, [pd.Timestamp(day) for day in payload.event_dates],
             payload.window_before, payload.window_after,
         )
+        if frame.empty:
+            raise LookupError("No overlapping returns were found for the requested event dates.")
         observations = frame.to_dict("records")
         run_ids = []
         for event_date in payload.event_dates:
