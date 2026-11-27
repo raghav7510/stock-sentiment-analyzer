@@ -1,11 +1,14 @@
 """Yahoo Finance adapter for prototyping; not an exchange-grade live feed."""
+import pandas as pd
 import yfinance as yf
+
 
 def resolve_indian_ticker(ticker: str) -> str:
     value = ticker.strip().upper()
     if not value:
         raise ValueError("Ticker is required.")
     return value if value.endswith((".NS", ".BO")) else f"{value}.NS"
+
 
 def get_daily_history(ticker: str, period: str = "1y") -> dict:
     symbol = resolve_indian_ticker(ticker)
@@ -14,5 +17,11 @@ def get_daily_history(ticker: str, period: str = "1y") -> dict:
         raise LookupError(f"No daily market history returned for {symbol}.")
     history = history.reset_index()
     history["Date"] = history["Date"].astype(str)
-    rows = history[["Date", "Open", "High", "Low", "Close", "Volume"]].where(history.notna(), None).to_dict("records")
-    return {"ticker": symbol, "data_status": "historical_daily_not_live", "provider": "Yahoo Finance via yfinance", "rows": rows}
+    selected = history[["Date", "Open", "High", "Low", "Close", "Volume"]]
+    rows = selected.astype(object).where(pd.notna(selected), None).to_dict("records")
+    return {
+        "ticker": symbol,
+        "data_status": "historical_daily_not_live",
+        "provider": "Yahoo Finance via yfinance",
+        "rows": rows,
+    }
