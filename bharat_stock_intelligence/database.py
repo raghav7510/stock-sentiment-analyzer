@@ -73,10 +73,12 @@ def persist_announcements(rows: list[dict]) -> int:
     statement = text("""
         INSERT INTO corporate_announcements(
             instrument_id, exchange, symbol, company_name, subject, details,
-            published_at, source_url, source_hash, source_format, retrieved_at
+            published_at, source_url, source_hash, source_format, retrieved_at,
+            category, priority, classification_method
         )
         VALUES (:instrument_id, :exchange, :symbol, :company_name, :subject, :details,
-            :published_at, :source_url, :source_hash, :source_format, :retrieved_at)
+            :published_at, :source_url, :source_hash, :source_format, :retrieved_at,
+            :category, :priority, :classification_method)
         ON CONFLICT (source_hash) DO NOTHING
     """)
     with get_engine().begin() as connection:
@@ -225,7 +227,8 @@ def persist_earnings_surprises(rows: list[dict]) -> int:
 
 def get_announcements(symbol: str | None = None, limit: int = 100) -> list[dict]:
     statement = text("""
-        SELECT exchange, symbol, company_name, subject, details, published_at, source_url
+        SELECT exchange, symbol, company_name, subject, details, published_at, source_url,
+               category, priority, classification_method
         FROM corporate_announcements
         WHERE (CAST(:symbol AS TEXT) IS NULL OR symbol=:symbol)
         ORDER BY published_at DESC NULLS LAST, retrieved_at DESC LIMIT :limit
