@@ -1,0 +1,16 @@
+# Install with: pip install -r requirements-bsi.txt
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+streamlit>=1.40,<2
+requests>=2.32,<3
+pandas>=2.2,<3
+numpy>=1.26,<3
+torch>=2.4,<3
+transformers>=4.45,<5
+yfinance>=0.2.50,<2
+pydantic-settings>=2.5,<3
+psycopg[binary]>=3.2,<4
+sqlalchemy>=2.0,<3
+plotly>=5.24,<7
+pytest>=8.3,<9
+httpx>=0.27,<1
