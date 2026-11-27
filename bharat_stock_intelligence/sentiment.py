@@ -1,11 +1,14 @@
-"""FinBERT inference and confidence-aware sentiment aggregation."""
+"""FinBERT inference; aggregation is kept dependency-light in metrics.py."""
 from __future__ import annotations
-from collections.abc import Iterable
+
 from dataclasses import dataclass
 from functools import lru_cache
-import math
+
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+from .metrics import aggregate_sentiment
+
 
 @dataclass(frozen=True)
 class SentimentResult:
@@ -14,12 +17,14 @@ class SentimentResult:
     confidence: float
     probabilities: dict[str, float]
 
+
 @lru_cache(maxsize=1)
 def _load_model(model_name: str):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     model.eval()
     return tokenizer, model
+
 
 def _class_names(model) -> list[str]:
     """Read class order from model metadata; never assume logit index order."""
@@ -35,6 +40,7 @@ def _class_names(model) -> list[str]:
         raise ValueError(f"Expected positive/negative/neutral classes, got {names}")
     return names
 
+
 def analyse_text(text: str, model_name: str = "ProsusAI/finbert") -> SentimentResult:
     cleaned = " ".join((text or "").split())
     if len(cleaned) < 3:
@@ -48,19 +54,3 @@ def analyse_text(text: str, model_name: str = "ProsusAI/finbert") -> SentimentRe
     score = probabilities["positive"] - probabilities["negative"]
     label = max(probabilities, key=probabilities.__getitem__)
     return SentimentResult(label, score, max(probabilities.values()), probabilities)
-
-def aggregate_sentiment(items: Iterable[dict]) -> dict:
-    """Aggregate scored articles with optional positive weights."""
-    rows = list(items)
-    if not rows:
-        return {"score": 0.0, "article_count": 0, "coverage": "no_data"}
-    weighted = []
-    for row in rows:
-        score, weight = float(row["score"]), float(row.get("weight", 1.0))
-        if not math.isfinite(score) or not -1 <= score <= 1:
-            raise ValueError("Sentiment scores must be finite and between -1 and 1.")
-        if not math.isfinite(weight) or weight <= 0:
-            raise ValueError("Article weights must be finite and positive.")
-        weighted.append((score, weight))
-    total_weight = sum(w for _, w in weighted)
-    return {"score": round(sum(s*w for s, w in weighted) / total_weight, 4), "article_count": len(rows), "coverage": "scored"}
