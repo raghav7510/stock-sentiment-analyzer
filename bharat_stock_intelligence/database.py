@@ -341,3 +341,45 @@ def get_nifty500_members() -> list[dict]:
     """)
     with get_engine().connect() as connection:
         return [dict(row) for row in connection.execute(statement).mappings().all()]
+
+
+
+def record_ingestion_run(source: str, dataset: str, status: str, rows_seen: int = 0,
+                         rows_written: int = 0, checksum: str | None = None,
+                         error_message: str | None = None) -> int:
+    """Persist one completed ingestion attempt for operational visibility."""
+    if status not in {"success", "partial", "failed"}:
+        raise ValueError("status must be success, partial, or failed")
+    statement = text("""
+        INSERT INTO ingestion_runs(
+            source, dataset, status, rows_seen, rows_written, checksum,
+            error_message, started_at, completed_at
+        )
+        VALUES (
+            :source, :dataset, :status, :rows_seen, :rows_written, :checksum,
+            :error_message, NOW(), NOW()
+        )
+        RETURNING id
+    """)
+    with get_engine().begin() as connection:
+        run_id = connection.execute(statement, {
+            "source": source, "dataset": dataset, "status": status,
+            "rows_seen": rows_seen, "rows_written": rows_written,
+            "checksum": checksum, "error_message": error_message,
+        }).scalar_one()
+    return int(run_id)
+
+
+def get_ingestion_status(limit: int = 20) -> list[dict]:
+    """Return recent ingestion attempts, newest first."""
+    statement = text("""
+        SELECT id, source, dataset, status, rows_seen, rows_written,
+               checksum, error_message, started_at, completed_at
+        FROM ingestion_runs
+        ORDER BY started_at DESC, id DESC
+        LIMIT :limit
+    """)
+    with get_engine().connect() as connection:
+        return [dict(row) for row in connection.execute(
+            statement, {"limit": limit}
+        ).mappings().all()]
