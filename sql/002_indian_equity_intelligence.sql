@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS corporate_announcements (
 CREATE INDEX IF NOT EXISTS ix_announcements_published ON corporate_announcements(published_at DESC);
 CREATE INDEX IF NOT EXISTS ix_announcements_instrument ON corporate_announcements(instrument_id, published_at DESC);
 
+ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS canonical_url TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_news_articles_canonical_url ON news_articles(canonical_url) WHERE canonical_url IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS article_instruments (
     article_id BIGINT NOT NULL REFERENCES news_articles(id) ON DELETE CASCADE,
     instrument_id BIGINT NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
