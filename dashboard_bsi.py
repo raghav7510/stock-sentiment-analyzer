@@ -42,6 +42,7 @@ if news_data:
     b.metric("Articles analysed", summary["article_count"])
     c.metric("Sentiment classification", "Positive" if summary["score"] > 0.1 else "Negative" if summary["score"] < -0.1 else "Neutral / mixed")
     st.caption("Sentiment score is a text-classification aggregate, not a return forecast. Review source coverage before interpreting it.")
+    st.caption(f"News source status: {news_data.get('data_status', 'unknown')} | Database persistence: {news_data.get('persistence_status', 'unknown')}")
     frame = pd.DataFrame(news_data["articles"])
     if not frame.empty:
         st.subheader("News sentiment distribution")
