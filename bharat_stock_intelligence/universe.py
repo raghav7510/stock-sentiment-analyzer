@@ -60,7 +60,8 @@ def parse_nifty500_constituents(csv_bytes: bytes) -> pd.DataFrame:
         "isin": frame[isin].str.strip() if isin else None,
         "exchange": "NSE",
         "source": "NSE Indices NIFTY 500 constituent CSV",
-        "snapshot_date": date.today(),
+        "captured_on": date.today(),
+        "source_as_of_date": None,
     })
     out = out.dropna(subset=["symbol"]).drop_duplicates(["symbol"])
     if len(out) < 450 or len(out) > 550:
