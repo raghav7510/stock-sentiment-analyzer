@@ -12,16 +12,17 @@ CREATE INDEX IF NOT EXISTS ix_instruments_isin ON instruments(isin);
 CREATE TABLE IF NOT EXISTS universe_snapshots (
     id BIGSERIAL PRIMARY KEY,
     index_name TEXT NOT NULL,
-    snapshot_date DATE NOT NULL,
+    captured_on DATE NOT NULL,
+    source_as_of_date DATE,
     symbol TEXT NOT NULL,
     exchange TEXT NOT NULL DEFAULT 'NSE',
     company_name TEXT,
     sector TEXT,
     source TEXT NOT NULL,
     imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(index_name, snapshot_date, exchange, symbol)
+    UNIQUE(index_name, captured_on, exchange, symbol)
 );
-CREATE INDEX IF NOT EXISTS ix_universe_snapshot_lookup ON universe_snapshots(index_name, snapshot_date, sector);
+CREATE INDEX IF NOT EXISTS ix_universe_snapshot_lookup ON universe_snapshots(index_name, captured_on, sector);
 
 CREATE TABLE IF NOT EXISTS instrument_aliases (
     id BIGSERIAL PRIMARY KEY,
