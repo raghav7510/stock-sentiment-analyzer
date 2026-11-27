@@ -18,7 +18,9 @@ def get_daily_history(ticker: str, period: str = "1y") -> dict:
     if history.empty:
         raise LookupError(f"No daily market history returned for {symbol}.")
     history = history.reset_index()
-    history["Date"] = pd.to_datetime(history["Date"], utc=True).dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Preserve the exchange-local session date; do not UTC-shift midnight IST into the prior date.
+    session_dates = pd.to_datetime(history["Date"])
+    history["Date"] = session_dates.dt.strftime("%Y-%m-%d") + "T00:00:00Z"
     selected = history[["Date", "Open", "High", "Low", "Close", "Volume"]]
     rows = selected.astype(object).where(pd.notna(selected), None).to_dict("records")
     return {
