@@ -7,8 +7,6 @@ import math
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-LABELS = {0: "negative", 1: "neutral", 2: "positive"}
-
 @dataclass(frozen=True)
 class SentimentResult:
     label: str
@@ -23,6 +21,20 @@ def _load_model(model_name: str):
     model.eval()
     return tokenizer, model
 
+def _class_names(model) -> list[str]:
+    """Read class order from model metadata; never assume logit index order."""
+    mapping = model.config.id2label
+    names = []
+    for index in range(model.config.num_labels):
+        raw = str(mapping.get(index, mapping.get(str(index), ""))).lower()
+        label = next((name for name in ("positive", "negative", "neutral") if name in raw), None)
+        if label is None:
+            raise ValueError(f"Unsupported FinBERT class label at index {index}: {raw!r}")
+        names.append(label)
+    if set(names) != {"positive", "negative", "neutral"}:
+        raise ValueError(f"Expected positive/negative/neutral classes, got {names}")
+    return names
+
 def analyse_text(text: str, model_name: str = "ProsusAI/finbert") -> SentimentResult:
     cleaned = " ".join((text or "").split())
     if len(cleaned) < 3:
@@ -31,9 +43,11 @@ def analyse_text(text: str, model_name: str = "ProsusAI/finbert") -> SentimentRe
     encoded = tokenizer(cleaned, return_tensors="pt", truncation=True, max_length=256)
     with torch.inference_mode():
         probs = torch.softmax(model(**encoded).logits, dim=-1)[0].cpu().tolist()
-    probabilities = {LABELS[i]: float(probs[i]) for i in range(3)}
+    class_names = _class_names(model)
+    probabilities = {class_names[i]: float(probs[i]) for i in range(len(class_names))}
     score = probabilities["positive"] - probabilities["negative"]
-    return SentimentResult(LABELS[max(range(3), key=probs.__getitem__)], score, max(probabilities.values()), probabilities)
+    label = max(probabilities, key=probabilities.__getitem__)
+    return SentimentResult(label, score, max(probabilities.values()), probabilities)
 
 def aggregate_sentiment(items: Iterable[dict]) -> dict:
     """Aggregate scored articles with optional positive weights."""
