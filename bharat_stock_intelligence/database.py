@@ -154,6 +154,7 @@ def persist_article_results(articles: list[dict], model_name: str) -> int:
 def get_instruments(query: str | None = None, limit: int = 100) -> list[dict]:
     statement = text("""
         SELECT i.symbol, i.company_name, i.exchange, i.sector, i.isin, i.series,
+               ARRAY(SELECT a.alias FROM instrument_aliases a WHERE a.instrument_id=i.id) AS aliases,
                EXISTS(SELECT 1 FROM universe_snapshots u
                       WHERE u.symbol=i.symbol AND u.exchange=i.exchange AND u.index_name='NIFTY 500'
                         AND u.snapshot_date=(SELECT MAX(snapshot_date) FROM universe_snapshots WHERE index_name='NIFTY 500')) AS in_nifty500
@@ -259,3 +260,47 @@ def persist_event_study(instrument_symbol: str, event_type: str, event_date: dat
     if value is None:
         raise LookupError(f"Instrument {instrument_symbol} is not in the instrument master.")
     return int(value)
+
+
+
+def persist_daily_prices(symbol: str, rows: list[dict], provider: str, exchange: str = "NSE") -> int:
+    statement = text("""
+        INSERT INTO daily_prices(instrument_id, observed_at, open, high, low, close, volume, provider, data_status)
+        SELECT i.id, CAST(:observed_at AS timestamptz), :open, :high, :low, :close, :volume, :provider, 'historical_daily'
+        FROM instruments i WHERE i.exchange=:exchange AND i.symbol=:symbol
+        ON CONFLICT(instrument_id, observed_at) DO UPDATE SET
+            open=EXCLUDED.open, high=EXCLUDED.high, low=EXCLUDED.low, close=EXCLUDED.close,
+            volume=EXCLUDED.volume, provider=EXCLUDED.provider, data_status=EXCLUDED.data_status
+    """)
+    written = 0
+    with get_engine().begin() as connection:
+        for row in rows:
+            result = connection.execute(statement, {
+                "symbol": symbol.upper(), "exchange": exchange, "observed_at": row["Date"],
+                "open": row.get("Open"), "high": row.get("High"), "low": row.get("Low"),
+                "close": row.get("Close"), "volume": row.get("Volume"), "provider": provider,
+            })
+            written += result.rowcount
+    return written
+
+
+def get_daily_close_returns(symbol: str, exchange: str = "NSE", limit: int = 1500) -> list[dict]:
+    statement = text("""
+        SELECT p.observed_at::date AS trade_date, p.close
+        FROM daily_prices p JOIN instruments i ON i.id=p.instrument_id
+        WHERE i.symbol=:symbol AND i.exchange=:exchange AND p.close IS NOT NULL
+        ORDER BY p.observed_at DESC LIMIT :limit
+    """)
+    with get_engine().connect() as connection:
+        rows = connection.execute(statement, {
+            "symbol": symbol.upper(), "exchange": exchange, "limit": limit,
+        }).mappings().all()
+    ordered = list(reversed(rows))
+    output = []
+    previous = None
+    for row in ordered:
+        close = float(row["close"])
+        daily_return = None if previous is None or previous == 0 else close / previous - 1
+        output.append({"date": row["trade_date"], "close": close, "return": daily_return})
+        previous = close
+    return output
