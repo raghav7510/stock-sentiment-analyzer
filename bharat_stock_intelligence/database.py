@@ -214,6 +214,17 @@ def persist_earnings_surprises(rows: list[dict]) -> int:
     return count
 
 
+def get_announcements(symbol: str | None = None, limit: int = 100) -> list[dict]:
+    statement = text("""
+        SELECT exchange, symbol, company_name, subject, details, published_at, source_url
+        FROM corporate_announcements
+        WHERE (:symbol IS NULL OR symbol=:symbol)
+        ORDER BY published_at DESC NULLS LAST, retrieved_at DESC LIMIT :limit
+    """)
+    with get_engine().connect() as connection:
+        return [dict(row) for row in connection.execute(statement, {"symbol": symbol, "limit": limit}).mappings().all()]
+
+
 def get_earnings_surprises(limit: int = 100) -> list[dict]:
     statement = text("""
         SELECT i.symbol, i.company_name, i.sector, e.fiscal_period, e.metric,
