@@ -32,11 +32,12 @@ Apply both schema files in order:
 ```bash
 psql postgresql://bsi:bsi@localhost:5432/bsi -f sql/001_initial_schema.sql
 psql postgresql://bsi:bsi@localhost:5432/bsi -f sql/002_indian_equity_intelligence.sql
+psql postgresql://bsi:bsi@localhost:5432/bsi -f sql/003_announcement_intelligence.sql
 ```
 
 Start API: `uvicorn api.main:app --reload`. API docs: `http://127.0.0.1:8000/docs`.
 
-Start dashboard in another terminal: `streamlit run dashboard_bsi.py`.
+Start dashboard in another terminal: `streamlit run dashboard_bsi.py`. The dashboard includes overview, NIFTY 500, announcements, earnings surprises, sector sentiment, historical event study, company news/price research and ingestion audit tabs.
 
 Run tests: `python -m pytest tests/ -q`.
 
@@ -73,6 +74,18 @@ python -m scripts.ingest_indian_equities --earnings-csv path/to/earnings_consens
 
 Fetch and persist historical daily prices by calling `GET /v1/market/INFY?period=5y` and the corresponding benchmark ticker. For the NIFTY 500 index, verify the correct provider symbol before use; index symbols are accepted with the leading `^`.
 
+### Watched announcement inbox
+
+For repeated processing of operator-downloaded CSV files, use the local inbox watcher. It does not collect data from exchange websites.
+
+```powershell
+New-Item -ItemType Directory -Force data\inbox\NSE, data\inbox\BSE
+# Copy permitted official CSV exports into the matching exchange folder.
+python -m scripts.watch_announcement_inbox
+```
+
+The watcher reports a scan heartbeat every polling interval, classifies each file as imported, duplicate-only, failed or retry, archives handled files, and exits cleanly on Ctrl+C. For a one-time scan use `python -m scripts.watch_announcement_inbox --once`. Audit records are available at `/v1/ingestion/status`.
+
 ## API
 
 - `GET /health` — process health.
@@ -101,12 +114,13 @@ Fetch and persist historical daily prices by calling `GET /v1/market/INFY?period
 - Docker Compose credentials are development-only. Do not expose this database publicly or deploy with these defaults.
 - Authentication, role-based access, scheduled workers, retries, production migrations, observability and deployment hardening remain future work.
 
-## Next engineering milestones
+## Remaining production requirements
 
-1. Secure licensed NSE/BSE corporate announcement and historical market-data feeds.
-2. Automate point-in-time instrument/universe snapshots with change detection and ingestion audits.
-3. Add issuer-specific alias governance and review queue for ambiguous entity matches.
-4. Connect structured quarterly financials and licensed consensus estimates; add EPS/revenue surprise history.
-5. Validate sector sentiment against issuer and sector returns with time-aware leakage controls.
-6. Build event studies with adjusted returns, benchmark controls, estimation windows, overlapping-event handling and statistical inference.
-7. Add walk-forward model evaluation, transaction costs, model cards, access control and production deployment.
+The research dashboard and core analytics workflow are implemented, but the following require external authorization, data contracts or further validation before production or operational trading use:
+
+1. Authorized NSE/BSE announcement and historical market-data feeds.
+2. Licensed quarterly financials and analyst consensus data.
+3. Curated issuer alias governance and a human review queue for ambiguous entity matches.
+4. Point-in-time universe history, corporate-action reconciliation and survivorship-aware adjusted prices.
+5. Event-study estimation windows, overlapping-event controls and statistical inference.
+6. Walk-forward model evaluation, transaction-cost modelling, authentication, access control, deployment and production observability.
