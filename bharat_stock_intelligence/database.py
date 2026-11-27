@@ -107,8 +107,12 @@ def persist_article_results(articles: list[dict], model_name: str) -> int:
         VALUES (:url, :canonical_url, :title, :source, CAST(:published_at AS timestamptz), :content_hash)
         ON CONFLICT DO NOTHING
     """)
-    lookup_article = text("SELECT id FROM news_articles WHERE canonical_url=:canonical_url OR url=:url
-        ORDER BY CASE WHEN canonical_url=:canonical_url THEN 0 ELSE 1 END LIMIT 1")
+    lookup_article = text("""
+        SELECT id FROM news_articles
+        WHERE canonical_url=:canonical_url OR url=:url
+        ORDER BY CASE WHEN canonical_url=:canonical_url THEN 0 ELSE 1 END
+        LIMIT 1
+    """)
     sentiment_statement = text("""
         INSERT INTO article_sentiment (article_id, model_name, label, score, confidence)
         VALUES (:article_id, :model_name, :label, :score, :confidence)
