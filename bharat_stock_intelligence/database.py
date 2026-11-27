@@ -304,3 +304,16 @@ def get_daily_close_returns(symbol: str, exchange: str = "NSE", limit: int = 150
         output.append({"date": row["trade_date"], "close": close, "return": daily_return})
         previous = close
     return output
+
+
+def ensure_instrument(symbol: str, exchange: str = "NSE", company_name: str | None = None) -> None:
+    statement = text("""
+        INSERT INTO instruments(symbol, company_name, exchange, source)
+        VALUES (:symbol, :company_name, :exchange, 'market_history_adapter')
+        ON CONFLICT(exchange, symbol) DO NOTHING
+    """)
+    with get_engine().begin() as connection:
+        connection.execute(statement, {
+            "symbol": symbol.upper(), "exchange": exchange,
+            "company_name": company_name or symbol.upper(),
+        })
