@@ -80,6 +80,7 @@ Fetch and persist historical daily prices by calling `GET /v1/market/INFY?period
 - `POST /v1/sentiment` — single-text FinBERT classification.
 - `GET /v1/news?company=Infosys&limit=50` — fetch, classify, match and persist available news.
 - `GET /v1/market/INFY?period=5y` — historical daily data and persistence.
+- `GET /v1/universe/nifty500` — latest imported NIFTY 500 constituent snapshot.
 - `GET /v1/instruments?q=Infosys` — issuer and instrument lookup.
 - `GET /v1/announcements?symbol=INFY` — imported corporate announcements.
 - `GET /v1/earnings/surprises` — actual-versus-consensus surprise records.
@@ -90,7 +91,7 @@ Fetch and persist historical daily prices by calling `GET /v1/market/INFY?period
 ## Data and research limitations
 
 - NSE publishes downloadable equity security lists and a NIFTY 500 constituent CSV; BSE publishes a standardized scrip-master format. The importer uses those downloadable files and stores source provenance. Check source terms and permitted use before redistribution or commercial deployment.
-- NIFTY 500 membership is a dated snapshot on each import. Full historical constituent membership requires archived snapshots from prior dates; current constituents must not be backfilled into the past.
+- NIFTY 500 membership is captured as a dated snapshot on each import. The capture date is not represented as the official effective date; source_as_of_date remains null unless the source supplies an explicit effective date. Full historical constituent membership requires archived snapshots from prior dates; current constituents must not be backfilled into the past.
 - Exchange announcement ingestion currently consumes official CSV exports downloaded by the operator. It does not claim automated real-time exchange polling. Any automation must use an authorized exchange feed or documented interface and comply with exchange terms.
 - NewsAPI search is not a complete NSE/BSE corporate-announcement feed; plan and licensing restrictions apply.
 - Earnings surprise calculation is implemented, but actual quarterly financial figures and consensus estimates must be supplied from identified sources. PDF/XBRL extraction and a licensed consensus provider are not connected.
