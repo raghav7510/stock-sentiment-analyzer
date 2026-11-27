@@ -317,3 +317,16 @@ def ensure_instrument(symbol: str, exchange: str = "NSE", company_name: str | No
             "symbol": symbol.upper(), "exchange": exchange,
             "company_name": company_name or symbol.upper(),
         })
+
+
+def get_nifty500_members() -> list[dict]:
+    statement = text("""
+        SELECT u.symbol, u.company_name, u.sector, u.exchange, u.captured_on,
+               u.source_as_of_date, u.source
+        FROM universe_snapshots u
+        WHERE u.index_name='NIFTY 500'
+          AND u.captured_on=(SELECT MAX(captured_on) FROM universe_snapshots WHERE index_name='NIFTY 500')
+        ORDER BY u.company_name
+    """)
+    with get_engine().connect() as connection:
+        return [dict(row) for row in connection.execute(statement).mappings().all()]
