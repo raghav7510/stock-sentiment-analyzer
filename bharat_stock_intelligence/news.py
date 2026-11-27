@@ -52,6 +52,7 @@ def fetch_company_news(query: str, page_size: int = 50) -> list[dict]:
                 "title": title,
                 "analysis_text": content,
                 "url": url,
+                "canonical_url": canonical_url,
                 "source": (item.get("source") or {}).get("name"),
                 "published_at": item.get("publishedAt"),
                 "retrieved_at": datetime.now(timezone.utc).isoformat(),
