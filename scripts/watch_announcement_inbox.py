@@ -67,11 +67,15 @@ def process_file(exchange: str, path: Path, inbox: Path) -> bool:
         logger.error("Announcement import failed for %s; moved to %s: %s", path, archived, exc)
         return True
 
-    record_ingestion_run(
-        source=f"{exchange}_official_csv", dataset="corporate_announcements",
-        status="success", rows_seen=len(records), rows_written=written,
-        checksum=checksum,
-    )
+    try:
+        record_ingestion_run(
+            source=f"{exchange}_official_csv", dataset="corporate_announcements",
+            status="success", rows_seen=len(records), rows_written=written,
+            checksum=checksum,
+        )
+    except Exception:
+        logger.exception("Could not persist successful ingestion audit; leaving %s in inbox", path)
+        return False
     archived = _archive(path, inbox, "processed")
     logger.info(
         "Imported %s: exchange=%s rows_seen=%d rows_written=%d archived=%s",
