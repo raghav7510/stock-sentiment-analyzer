@@ -82,15 +82,15 @@ with overview:
     except requests.RequestException:
         col1.metric("NIFTY 500 constituents", "Unavailable")
     try:
-        a = api_get("/v1/announcements", {"limit": 1})
-        col2.metric("Announcement records", len(a.get("announcements", [])) if a else 0)
-        col2.caption("Latest record preview only; use Announcements tab for full list")
+        a = api_get("/v1/announcements", {"limit": 500})
+        col2.metric("Announcements returned", len(a.get("announcements", [])))
+        col2.caption("Latest 500 maximum; not a database-wide total")
     except requests.RequestException:
         col2.metric("Announcements", "Unavailable")
     try:
-        e = api_get("/v1/earnings/surprises", {"limit": 1})
-        col3.metric("Earnings surprise records", len(e.get("surprises", [])) if e else 0)
-        col3.caption("Latest record preview only; use Earnings tab for full list")
+        e = api_get("/v1/earnings/surprises", {"limit": 500})
+        col3.metric("Earnings records returned", len(e.get("surprises", [])))
+        col3.caption("Latest 500 maximum; not a database-wide total")
     except requests.RequestException:
         col3.metric("Earnings records", "Unavailable")
     st.info("Coverage depends on the files and providers actually ingested. Empty datasets are not interpreted as neutral signals.")
@@ -195,8 +195,8 @@ with event_study:
         show_table(observations)
         if observations:
             of = pd.DataFrame(observations)
-            if {"relative_day", "abnormal_return"}.issubset(of.columns):
-                st.plotly_chart(px.bar(of, x="relative_day", y="abnormal_return", title="Market-adjusted abnormal return by event time"), use_container_width=True)
+            if {"event_day", "abnormal_return"}.issubset(of.columns):
+                st.plotly_chart(px.bar(of, x="event_day", y="abnormal_return", title="Market-adjusted abnormal return by event time"), use_container_width=True)
         st.caption(event_result.get("interpretation", ""))
 
 with company_tab:
