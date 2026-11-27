@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from bharat_stock_intelligence.config import get_settings
 from bharat_stock_intelligence.database import (
     ensure_instrument, get_announcements, get_daily_close_returns, get_earnings_surprises,
-    get_engine, get_instruments, get_nifty500_members, get_sector_sentiment, persist_article_results,
+    get_engine, get_ingestion_status, get_instruments, get_nifty500_members, get_sector_sentiment, persist_article_results,
     persist_daily_prices, persist_event_study,
 )
 from bharat_stock_intelligence.entity_matching import match_companies
@@ -215,6 +215,15 @@ def instruments(q: str | None = Query(default=None, max_length=120), limit: int 
     except Exception as exc:
         logger.exception("Instrument lookup failed")
         raise HTTPException(status_code=503, detail="Instrument database unavailable") from exc
+
+
+@app.get("/v1/ingestion/status")
+def ingestion_status(limit: int = Query(20, ge=1, le=100)):
+    try:
+        return {"runs": get_ingestion_status(limit)}
+    except Exception as exc:
+        logger.exception("Ingestion status lookup failed")
+        raise HTTPException(status_code=503, detail="Ingestion status unavailable") from exc
 
 
 @app.get("/v1/announcements")
