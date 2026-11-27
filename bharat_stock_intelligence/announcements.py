@@ -29,7 +29,7 @@ CATEGORY_RULES = (
 
 HIGH_PRIORITY = re.compile(
     r"\b(financial results?|merger|amalgamation|acquisition|insolvency|nclt|"
-    r"fraud|default|resignation of|cease operations|plant shutdown|重大)\b", re.I
+    r"fraud|default|resignation of|cease operations|plant shutdown)\b", re.I
 )
 MEDIUM_PRIORITY_CATEGORIES = {
     "order_win", "fundraising", "regulatory_legal", "management_change",
