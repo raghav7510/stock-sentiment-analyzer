@@ -167,7 +167,7 @@ def get_instruments(query: str | None = None, limit: int = 100) -> list[dict]:
                       WHERE u.symbol=i.symbol AND u.exchange=i.exchange AND u.index_name='NIFTY 500'
                         AND u.captured_on=(SELECT MAX(captured_on) FROM universe_snapshots WHERE index_name='NIFTY 500')) AS in_nifty500
         FROM instruments i
-        WHERE (:query IS NULL OR i.symbol ILIKE :pattern OR i.company_name ILIKE :pattern)
+        WHERE (CAST(:query AS TEXT) IS NULL OR i.symbol ILIKE :pattern OR i.company_name ILIKE :pattern)
         ORDER BY i.company_name LIMIT :limit
     """)
     with get_engine().connect() as connection:
@@ -227,7 +227,7 @@ def get_announcements(symbol: str | None = None, limit: int = 100) -> list[dict]
     statement = text("""
         SELECT exchange, symbol, company_name, subject, details, published_at, source_url
         FROM corporate_announcements
-        WHERE (:symbol IS NULL OR symbol=:symbol)
+        WHERE (CAST(:symbol AS TEXT) IS NULL OR symbol=:symbol)
         ORDER BY published_at DESC NULLS LAST, retrieved_at DESC LIMIT :limit
     """)
     with get_engine().connect() as connection:
