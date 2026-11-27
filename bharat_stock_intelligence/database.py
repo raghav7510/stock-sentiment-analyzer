@@ -139,8 +139,8 @@ def persist_article_results(articles: list[dict], model_name: str) -> int:
             })
             for match in article.get("company_matches", []):
                 instrument_id = connection.execute(text(
-                    "SELECT id FROM instruments WHERE exchange='NSE' AND symbol=:symbol LIMIT 1"
-                ), {"symbol": match["symbol"]}).scalar()
+                    "SELECT id FROM instruments WHERE exchange=:exchange AND symbol=:symbol LIMIT 1"
+                ), {"symbol": match["symbol"], "exchange": match.get("exchange", "NSE")}).scalar()
                 if instrument_id:
                     connection.execute(association, {
                         "article_id": article_id, "instrument_id": instrument_id,
