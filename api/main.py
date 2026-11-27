@@ -7,7 +7,11 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from bharat_stock_intelligence.config import get_settings
-from bharat_stock_intelligence.database import get_engine, persist_article_results
+from bharat_stock_intelligence.database import (
+    get_announcements, get_earnings_surprises, get_engine, get_instruments,
+    get_sector_sentiment, persist_article_results, persist_event_study,
+)
+from bharat_stock_intelligence.entity_matching import match_companies
 from bharat_stock_intelligence.event_study import calculate_event_study
 from bharat_stock_intelligence.logging_config import configure_logging
 from bharat_stock_intelligence.market_data import get_daily_history
@@ -39,6 +43,9 @@ class EventStudyRequest(BaseModel):
     event_dates: list[date]
     window_before: int = Field(default=5, ge=0, le=60)
     window_after: int = Field(default=5, ge=0, le=60)
+    instrument_symbol: str | None = Field(default=None, min_length=1, max_length=30)
+    event_type: str = Field(default="corporate_announcement", min_length=2, max_length=80)
+    benchmark_symbol: str = Field(default="NIFTY 500", min_length=1, max_length=30)
 
 
 @app.get("/health")
@@ -77,10 +84,14 @@ def sentiment(payload: AnalyseRequest):
 def news(company: str = Query(min_length=1, max_length=120), limit: int = Query(50, ge=1, le=100)):
     try:
         articles, scored = fetch_company_news(company, limit), []
+        # Universe-backed matching; unmatched stories remain unmatched, not force-assigned.
+        instrument_rows = get_instruments(limit=5000)
         for article in articles:
             result = analyse_text(article["analysis_text"], get_settings().finbert_model)
+            matches = match_companies(article["analysis_text"], instrument_rows)
             scored.append({
                 **article,
+                "company_matches": matches,
                 "sentiment": result.label,
                 "score": result.score,
                 "confidence": result.confidence,
@@ -101,6 +112,7 @@ def news(company: str = Query(min_length=1, max_length=120), limit: int = Query(
             "data_status": "news_provider_response_not_exchange_complete",
             "persistence_status": persistence,
             "model": get_settings().finbert_model,
+            "matched_company_count": len({m["symbol"] for a in scored for m in a.get("company_matches", [])}),
         }
     except (RuntimeError, LookupError, ValueError) as exc:
         logger.warning("News request rejected: %s", str(exc))
@@ -136,11 +148,59 @@ def event_study(payload: EventStudyRequest):
             asset, benchmark, [pd.Timestamp(day) for day in payload.event_dates],
             payload.window_before, payload.window_after,
         )
+        observations = frame.to_dict("records")
+        run_id = None
+        if payload.instrument_symbol:
+            run_id = persist_event_study(
+                payload.instrument_symbol.upper(), payload.event_type, payload.event_dates[0],
+                payload.benchmark_symbol, payload.window_before, payload.window_after,
+                observations, "Market-adjusted abnormal return: asset daily return minus benchmark daily return; CAR is cumulative sum.",
+            )
         return {
+            "run_id": run_id,
             "method": "market_adjusted_abnormal_return",
             "event_count": len(payload.event_dates),
-            "observations": frame.to_dict("records"),
+            "observations": observations,
             "interpretation": "Descriptive historical event analysis; not a forecast or causal estimate.",
         }
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+
+@app.get("/v1/instruments")
+def instruments(q: str | None = Query(default=None, max_length=120), limit: int = Query(100, ge=1, le=500)):
+    try:
+        rows = get_instruments(query=q, limit=limit)
+        return {"count": len(rows), "instruments": rows}
+    except Exception as exc:
+        logger.exception("Instrument lookup failed")
+        raise HTTPException(status_code=503, detail="Instrument database unavailable") from exc
+
+
+@app.get("/v1/announcements")
+def announcements(symbol: str | None = Query(default=None, max_length=30), limit: int = Query(100, ge=1, le=500)):
+    try:
+        return {"announcements": get_announcements(symbol.upper() if symbol else None, limit)}
+    except Exception as exc:
+        logger.exception("Announcement lookup failed")
+        raise HTTPException(status_code=503, detail="Announcement database unavailable") from exc
+
+
+@app.get("/v1/earnings/surprises")
+def earnings_surprises(limit: int = Query(100, ge=1, le=500)):
+    try:
+        return {"surprises": get_earnings_surprises(limit)}
+    except Exception as exc:
+        logger.exception("Earnings surprise lookup failed")
+        raise HTTPException(status_code=503, detail="Earnings database unavailable") from exc
+
+
+@app.get("/v1/sectors/sentiment")
+def sector_sentiment(days: int = Query(7, ge=1, le=90)):
+    try:
+        rows = get_sector_sentiment(get_settings().finbert_model, days)
+        return {"lookback_days": days, "sectors": rows, "coverage": "no_data" if not rows else "scored"}
+    except Exception as exc:
+        logger.exception("Sector sentiment query failed")
+        raise HTTPException(status_code=503, detail="Sector sentiment database unavailable") from exc
