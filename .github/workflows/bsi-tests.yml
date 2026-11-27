@@ -2,9 +2,13 @@ name: Bharat Stock Intelligence tests
 
 on:
   push:
-    branches: [main, feat/bharat-stock-intelligence-foundation]
+    branches: [main]
   pull_request:
     branches: [main]
+
+concurrency:
+  group: bsi-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tests:
