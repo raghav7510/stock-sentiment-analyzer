@@ -1,5 +1,3 @@
-from datetime import timezone
-
 import pytest
 
 from bharat_stock_intelligence.announcements import (
@@ -18,7 +16,7 @@ def test_parse_nse_style_announcement_export():
     assert rows[0]["symbol"] == "INFY"
     assert rows[0]["subject"] == "Outcome of Board Meeting"
     assert rows[0]["published_at"] is not None
-    assert rows[0]["published_at"].tzinfo == timezone.utc
+    assert rows[0]["published_at"].utcoffset().total_seconds() == 0
     assert rows[0]["published_at"].hour == 12  # 18:00 IST converted to 12:30 UTC
     assert rows[0]["source_url"].startswith("https://")
     assert rows[0]["category"] == "financial_results"
