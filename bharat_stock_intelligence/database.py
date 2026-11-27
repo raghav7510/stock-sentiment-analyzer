@@ -62,8 +62,8 @@ def persist_universe(instruments: list[dict], constituents: list[dict]) -> dict:
                 "company_name": row.get("company_name"),
             })
             connection.execute(snapshot_sql, {
-                "captured_on": captured_on, "symbol": row["symbol"],
-                "company_name": row.get("company_name"), "sector": row.get("sector"),
+                "captured_on": captured_on, "source_as_of_date": row.get("source_as_of_date"),
+                "symbol": row["symbol"], "company_name": row.get("company_name"), "sector": row.get("sector"),
                 "source": row.get("source", "NSE Indices NIFTY 500 constituent CSV"),
             })
     return {"instruments_upserted": len(instruments), "nifty500_membership_rows": len(constituents)}
