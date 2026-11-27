@@ -40,6 +40,7 @@ class DailyReturn(BaseModel):
 
 class StoredEventStudyRequest(BaseModel):
     instrument_symbol: str = Field(min_length=1, max_length=30)
+    instrument_exchange: str = Field(default="NSE", pattern="^(NSE|BSE)$")
     benchmark_symbol: str = Field(min_length=1, max_length=30)
     event_dates: list[date] = Field(min_length=1, max_length=20)
     event_type: str = Field(default="corporate_announcement", min_length=2, max_length=80)
@@ -54,6 +55,7 @@ class EventStudyRequest(BaseModel):
     window_before: int = Field(default=5, ge=0, le=60)
     window_after: int = Field(default=5, ge=0, le=60)
     instrument_symbol: str | None = Field(default=None, min_length=1, max_length=30)
+    instrument_exchange: str = Field(default="NSE", pattern="^(NSE|BSE)$")
     event_type: str = Field(default="corporate_announcement", min_length=2, max_length=80)
     benchmark_symbol: str = Field(default="NIFTY 500", min_length=1, max_length=30)
 
@@ -175,6 +177,7 @@ def event_study(payload: EventStudyRequest):
                     payload.instrument_symbol.upper(), payload.event_type, event_date,
                     payload.benchmark_symbol, payload.window_before, payload.window_after,
                     event_rows, "Market-adjusted abnormal return: asset daily return minus benchmark daily return; CAR is cumulative sum.",
+                    payload.instrument_exchange,
                 ))
         return {
             "run_ids": run_ids,
@@ -230,7 +233,7 @@ def sector_sentiment(days: int = Query(7, ge=1, le=90)):
 @app.post("/v1/analytics/event-study/from-stored-prices")
 def event_study_from_stored_prices(payload: StoredEventStudyRequest):
     try:
-        asset_rows = get_daily_close_returns(payload.instrument_symbol)
+        asset_rows = get_daily_close_returns(payload.instrument_symbol, payload.instrument_exchange)
         benchmark_exchange = "INDEX" if payload.benchmark_symbol.startswith("^") else "NSE"
         benchmark_rows = get_daily_close_returns(payload.benchmark_symbol.removesuffix(".NS"), benchmark_exchange)
         asset = pd.Series(
@@ -253,6 +256,7 @@ def event_study_from_stored_prices(payload: StoredEventStudyRequest):
                 payload.instrument_symbol.upper(), payload.event_type, event_date,
                 payload.benchmark_symbol, payload.window_before, payload.window_after,
                 event_rows, "Stored Yahoo Finance daily close returns; abnormal return = asset return minus benchmark return.",
+                payload.instrument_exchange,
             ))
         return {
             "run_ids": run_ids,
