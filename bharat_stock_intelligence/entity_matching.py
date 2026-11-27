@@ -27,6 +27,7 @@ def match_companies(text: str, instruments: list[dict]) -> list[dict]:
         if company_hit or symbol_hit:
             matches.append({
                 "symbol": symbol,
+                "exchange": instrument.get("exchange", "NSE"),
                 "company_name": instrument.get("company_name"),
                 "match_type": "company_name_or_alias" if company_hit else "ticker_symbol",
                 "matched_text": company_hit or symbol,
