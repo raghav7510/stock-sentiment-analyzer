@@ -31,7 +31,6 @@ def iter_ready_files(inbox: Path, settle_seconds: int = 10, now: float | None = 
                 if current - path.stat().st_mtime >= settle_seconds:
                     yield exchange, path
             except FileNotFoundError:
-                # Another process may have moved the file between glob and stat.
                 continue
 
 
@@ -45,15 +44,13 @@ def _archive(path: Path, inbox: Path, bucket: str) -> Path:
     return Path(shutil.move(str(path), str(destination)))
 
 
-def process_file(exchange: str, path: Path, inbox: Path) -> bool:
-    """Import and archive one file. Return False if it should be retried."""
+def process_file(exchange: str, path: Path, inbox: Path) -> str:
+    """Import and archive one file. Return imported, duplicate_only, failed, or retry."""
     checksum = hashlib.sha256(path.read_bytes()).hexdigest()
     try:
         records = parse_announcement_csv(path.read_bytes(), exchange)
         written = persist_announcements(records)
     except Exception as exc:
-        # Do not discard the file if the database is unavailable and the failed
-        # attempt cannot be audited. It remains in the inbox for a later retry.
         try:
             record_ingestion_run(
                 source=f"{exchange}_official_csv", dataset="corporate_announcements",
@@ -62,10 +59,10 @@ def process_file(exchange: str, path: Path, inbox: Path) -> bool:
             )
         except Exception:
             logger.exception("Could not persist failed ingestion audit; leaving %s in inbox", path)
-            return False
+            return "retry"
         archived = _archive(path, inbox, "failed")
         logger.error("Announcement import failed for %s; moved to %s: %s", path, archived, exc)
-        return True
+        return "failed"
 
     try:
         record_ingestion_run(
@@ -75,13 +72,27 @@ def process_file(exchange: str, path: Path, inbox: Path) -> bool:
         )
     except Exception:
         logger.exception("Could not persist successful ingestion audit; leaving %s in inbox", path)
-        return False
+        return "retry"
     archived = _archive(path, inbox, "processed")
+    outcome = "imported" if written else "duplicate_only"
     logger.info(
-        "Imported %s: exchange=%s rows_seen=%d rows_written=%d archived=%s",
-        path.name, exchange, len(records), written, archived,
+        "Processed %s: exchange=%s rows_seen=%d rows_written=%d outcome=%s archived=%s",
+        path.name, exchange, len(records), written, outcome, archived,
     )
-    return True
+    return outcome
+
+
+def scan_inbox(inbox: Path, settle_seconds: int = 10) -> dict[str, int]:
+    """Scan once and return operational counters for the heartbeat log."""
+    counts = {
+        "files_ready": 0, "imported": 0, "duplicate_only": 0,
+        "failed": 0, "retry": 0,
+    }
+    for exchange, path in iter_ready_files(inbox, settle_seconds):
+        counts["files_ready"] += 1
+        outcome = process_file(exchange, path, inbox)
+        counts[outcome] += 1
+    return counts
 
 
 def run(inbox: Path, poll_seconds: int, settle_seconds: int, once: bool = False):
@@ -91,10 +102,14 @@ def run(inbox: Path, poll_seconds: int, settle_seconds: int, once: bool = False)
 
     logger.info("Watching %s (poll=%ss, settle=%ss)", inbox.resolve(), poll_seconds, settle_seconds)
     while True:
-        for exchange, path in iter_ready_files(inbox, settle_seconds):
-            process_file(exchange, path, inbox)
+        counts = scan_inbox(inbox, settle_seconds)
+        logger.info(
+            "Inbox scan complete: ready=%d imported=%d duplicate_only=%d failed=%d retry=%d",
+            counts["files_ready"], counts["imported"], counts["duplicate_only"],
+            counts["failed"], counts["retry"],
+        )
         if once:
-            return
+            return counts
         time.sleep(poll_seconds)
 
 
@@ -111,7 +126,10 @@ def main():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    run(Path(args.inbox), args.poll_seconds, args.settle_seconds, args.once)
+    try:
+        run(Path(args.inbox), args.poll_seconds, args.settle_seconds, args.once)
+    except KeyboardInterrupt:
+        logger.info("Watcher stopped by user; shutdown complete.")
 
 
 if __name__ == "__main__":
